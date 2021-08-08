@@ -1,4 +1,4 @@
-# Project Name <--- FIXME
+# Project Name <--- Seq2Seq
 
 Library Logo <--- **FIXME**
 
