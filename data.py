@@ -1,5 +1,6 @@
 import string
 import re
+import tensorflow as tf
 
 
 class Dataset:
@@ -94,7 +95,7 @@ class Dataset:
         sen = re.sub("'", "", sen)
         sen = re.sub("\s+", " ", sen)
         sen = " ".join([s for s in sen.split(" ") if s not in self.punctuation_digits])
-        return "<start> " + sen + " <stop>"
+        return sen + " <eos>"
 
     def preprocessing_sentence(self, language_1, language_2):
         """
@@ -121,5 +122,5 @@ class Dataset:
 
 if __name__ == '__main__':
     data = Dataset("dataset/train.vi.txt", "dataset/train.en.txt")
-    processed_original_language, processed_target_language = data.build_dataset()
-    print(len(processed_original_language), len(processed_target_language))
+    processed_original_language, processed_target_language = data.build_dataset(True)
+    # print(len(processed_original_language), len(processed_target_language))
