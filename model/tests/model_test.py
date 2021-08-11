@@ -2,55 +2,84 @@ import tensorflow as tf
 from tensorflow.keras.layers import Layer, Embedding, LSTM
 
 
-class Encoder(Layer):
+class Seq2SeqEncode(Layer):
 
-    def __init__(self, input_dím, embedding_dim, hidden_dim, n_layers=None):
+    def __init__(self, vocab_size, embedding_size, hidden_units, n_layers=None):
         """
             Encoder block in Sequence to Sequence
 
-        :param input_dím: Số lượng từ của bộ từ vựng
-        :param embedding_dim: Chiều của vector embedding
-        :param hidden_dim: Chiều của lớp ẩn
-        :param n_layers: Số lượng layer
+        :param vocab_size: Số lượng từ của bộ từ vựng đầu vào
+        :param embedding_size: Chiều của vector embedding
+        :param hidden_units: Chiều của lớp ẩn
+        """
+        super(Seq2SeqEncode, self).__init__()
+
+        self.hidden_units = hidden_units
+
+        self.embedding = Embedding(vocab_size, embedding_size)
+        self.encode_layer_1 = LSTM(hidden_units,
+                                   return_sequences=True,
+                                   return_state=True,
+                                   recurrent_initializer="he_normal")
+        self.encode_layer_2 = LSTM(hidden_units,
+                                   return_sequences=True,
+                                   return_state=True,
+                                   recurrent_initializer="he_normal")
+
+    def __call__(self, x):
+        """
+        :input:
+            - x: [batch_size, max_length]
+
+        :return:
+            - output: [batch_size, embedding_dim, Hidden_unites]
+            - state_h: [batch_size, hidden_units] - Current Hidden state
+            - state_c: [batch_size, hidden_units] - Current Cell state
+        """
+        encode = self.embedding(x)
+        encode = self.encode_layer_1(encode)
+        encode, state_h, state_c = self.encode_layer_2(encode)
+        return encode, [state_h, state_c]
+
+
+class Seq2SeqDecode(Layer):
+    def __init__(self, vocab_size, embedding_size, hidden_units, n_layers=None):
+        """
+            Decoder block in Sequence to Sequence
+
+        :param vocab_size: Số lượng từ của bộ từ vựng dự đoán
+        :param embedding_size: Chiều của vector embedding
+        :param hidden_units: Chiều của lớp ẩn
+        """
+        super(Seq2SeqDecode, self).__init__()
+
+        self.embedding = Embedding(vocab_size, embedding_size)
+        self.decode_layer_1 = LSTM(hidden_units,
+                                   return_sequences=True,
+                                   return_state=True,
+                                   recurrent_initializer="he_normal")
+        self.decode_layer_2 = LSTM(hidden_units,
+                                   return_sequences=True,
+                                   return_state=True,
+                                   recurrent_initializer="he_normal")
+        self.dense = tf.keras.layers.Dense(vocab_size)
+
+    def __call__(self, x, state, **kwargs):
+        """
+        :input:
+            - x: [batch_size, max_length]
+            - State:
+                + state_h: [batch_size, hidden_units] - Hidden state in encode layer
+                + state_c: [batch_size, hidden_units] - Cell state in encode layer
+
+        :return:
+            - output: [batch_size, embedding_dim, Hidden_unites]
+            - state_h: [batch_size, hidden_units] - Current Hidden state
+            - state_c: [batch_size, hidden_units] - Current Cell state
         """
 
-        super(Encoder, self).__init__()
-
-        self.hidden_dim = hidden_dim
-        self.n_layers = n_layers
-
-        self.embedding = Embedding(input_dim=input_dím,
-                                   hidden_dim=embedding_dim,
-                                   embeddings_initializer="he_normal",
-                                   embeddings_regularizer=None,
-                                   embeddings_constraint=None,
-                                   mask_zero=False)
-        self.encoder = LSTM(hidden_dim,
-                            return_sequences=True,
-                            return_state=True,
-                            recurrent_initializer="he_normal")
-
-    def call(self, x, hidden_state):
-        x = self.embedding(x)
-        output, last_state = self.encoder(x, hidden_state)
-        if self.n_layers:
-            for _ in self.n_layers - 1:
-                output, last_state = self.encoder(output, hidden_state)
-        return output, last_state
-
-    def _init_hidden_state(self, batch_size):
-        return tf.zeros((batch_size, self.hidden_dim))
-
-
-# if __name__ == '__main__':
-    # embedding_size = 1000
-    # vocab_size = 10000
-    # hidden_unit = 256
-    # BATCH_SIZE = 32
-    #
-    #
-    # encoder = Encoder(embedding_size, vocab_size, hidden_unit)
-    # hidden_state = encoder.init_hidden_state(BATCH_SIZE)
-    # tmp_outputs, last_state = encoder(tmp_x, hidden_state)
-    # print(tmp_outputs.shape)
-    # print(last_state.shape)
+        decode = self.embedding(x)  # [Batch_size, vocab_length, Embedding_size]
+        decode = self.decode_layer_1(decode, state)
+        decode, state_h, state_c = self.decode_layer_2(decode)
+        output_decode = self.dense(decode)
+        return output_decode, [state_h, state_c]

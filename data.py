@@ -3,7 +3,7 @@ import re
 import tensorflow as tf
 
 
-class Dataset:
+class DatasetLoader:
     """
     :input:
         Khởi tạo dữ liệu cho quá trình huấn luyện, bao gồm 2 tập.
@@ -97,7 +97,7 @@ class Dataset:
         sen = " ".join([s for s in sen.split(" ") if s not in self.punctuation_digits])
         return sen + " <eos>"
 
-    def preprocessing_sentence(self, language_1, language_2):
+    def preprocessing_sentence(self, raw_origin_language, raw_target_language):
         """
         :input:
             language_1: Ngôn ngữ gốc: (list)
@@ -110,7 +110,7 @@ class Dataset:
         """
         sentences_1 = []
         sentences_2 = []
-        for sen_1, sen_2 in zip(language_1, language_2):
+        for sen_1, sen_2 in zip(raw_origin_language, raw_target_language):
             sen_1 = self.remove_punctuation_digits(sen_1)
             sen_2 = self.remove_punctuation_digits(sen_2)
             if self.min_length <= len(sen_1.split(" ")) <= self.max_length \
