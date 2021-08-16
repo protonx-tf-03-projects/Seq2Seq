@@ -125,14 +125,3 @@ if __name__ == '__main__':
     data = Dataset("dataset/train.vi.txt", "dataset/train.en.txt")
     processed_original_language, processed_target_language = data.build_dataset(True)
     # print(len(processed_original_language), len(processed_target_language))
-=======
-class Dataset:
-    def __init__(self):
-        pass
-
-    def load_dataset(self):
-        pass
-
-    def build_dataset(self):
-        pass
->>>>>>> parent of e7b4aa3 (Loading dataset from txt files)
