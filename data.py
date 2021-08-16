@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import string
 import re
 import tensorflow as tf
@@ -122,6 +121,6 @@ class DatasetLoader:
 
 
 if __name__ == '__main__':
-    data = Dataset("dataset/train.vi.txt", "dataset/train.en.txt")
+    data = DatasetLoader("dataset/train.vi.txt", "dataset/train.en.txt")
     processed_original_language, processed_target_language = data.build_dataset(True)
     # print(len(processed_original_language), len(processed_target_language))
