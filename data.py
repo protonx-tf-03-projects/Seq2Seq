@@ -1,6 +1,41 @@
 import string
 import re
-import tensorflow as tf
+import numpy as np
+
+
+class BuildLanguage:
+    def __init__(self, lines):
+        self.lines = lines
+        self.word2id = {}
+        self.id2word = {}
+        self.vocab = set()
+        self.max_len = 0
+        self.min_len = 0
+        self.vocab_size = 0
+        self.init_language_params()
+
+    def init_language_params(self):
+        for line in self.lines:
+            self.vocab.update(line.split(" "))
+
+        self.word2id['<pad>'] = 0
+
+        for id, word in enumerate(self.vocab):
+            self.word2id[word] = id + 1
+
+        for word, id in self.word2id.items():
+            self.id2word[id] = word
+
+        self.max_len = max([len(line.split(" ")) for line in self.lines])
+        self.min_len = min([len(line.split(" ")) for line in self.lines])
+
+        self.vocab_size = len(self.vocab) + 1
+
+    def sentence_to_vector(self, sent):
+        return np.array([self.word2id[word] for word in sent.split(" ")])
+
+    def vector_to_sentence(self, vector):
+        return " ".join([self.id2word[id] for id in vector])
 
 
 class DatasetLoader:
@@ -23,8 +58,8 @@ class DatasetLoader:
     def __init__(self,
                  language_1,
                  language_2,
-                 min_length=20,
-                 max_length=30):
+                 min_length=10,
+                 max_length=14):
         """
             Khởi tạo
 
@@ -71,13 +106,17 @@ class DatasetLoader:
         # Xóa dấu câu và số
         # Thêm phần tử nhận diện lúc bắt đầu và kết thúc dịch (VD: <start>, <stop>, ...)
         # Xử lý độ dài câu: min_length <= length <= max_length
-        processed_original, processed_target = self.preprocessing_sentence(raw_origin_language,
-                                                                           raw_target_language)
-        if debug:
-            for sen_1, sen_2 in zip(processed_original[:5], processed_target[:5]):
-                print("{}\n{}\n\n".format(sen_1, sen_2))
+        inp_lang, tar_lang = self.preprocessing_sentence(raw_origin_language, raw_target_language)
 
-        return processed_original, processed_target
+        inp_vector = [inp_lang.sentence_to_vector(line) for line in inp_lang.lines]
+        tar_vector = [tar_lang.sentence_to_vector(line) for line in tar_lang.lines]
+
+        caches = (inp_lang, tar_lang)
+        if debug:
+            for vector, sentence in zip(inp_vector[:5], inp_lang.lines[:5]):
+                print("Vector: {}\nSentence: {}\n\n".format(vector, sentence))
+
+        return inp_vector, tar_vector, caches
 
     def remove_punctuation_digits(self, sen):
         """
@@ -117,10 +156,13 @@ class DatasetLoader:
                     and self.min_length <= len(sen_2.split(" ")) <= self.max_length:
                 sentences_1.append(sen_1)
                 sentences_2.append(sen_2)
-        return sentences_1, sentences_2
+
+        inp_lang = BuildLanguage(sentences_1)
+        tar_lang = BuildLanguage(sentences_2)
+
+        return inp_lang, tar_lang
 
 
 if __name__ == '__main__':
     data = DatasetLoader("dataset/train.vi.txt", "dataset/train.en.txt")
-    processed_original_language, processed_target_language = data.build_dataset(True)
-    # print(len(processed_original_language), len(processed_target_language))
+    processed_original_language, processed_target_language, caches = data.build_dataset(True)
