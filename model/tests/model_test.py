@@ -1,7 +1,5 @@
-import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Layer, Embedding, LSTM, Input
-from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Layer, Embedding, LSTM
 
 
 class Seq2SeqEncode(Layer):
@@ -64,9 +62,10 @@ class Seq2SeqDecode(Layer):
                                    return_state=True,
                                    recurrent_initializer="he_normal")
         self.decode_layer_2 = LSTM(hidden_units,
+                                   return_sequences=True,
                                    return_state=True,
                                    recurrent_initializer="he_normal")
-        self.dense = tf.keras.layers.Dense(vocab_size, activation="softmax")
+        self.dense = tf.keras.layers.Dense(vocab_size)
 
     def __call__(self, x, state, **kwargs):
         """
