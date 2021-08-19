@@ -1,5 +1,7 @@
+import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Layer, Embedding, LSTM
+from tensorflow.keras.layers import Layer, Embedding, LSTM, Input
+from tensorflow.keras.models import Model
 
 
 class Seq2SeqEncode(Layer):
@@ -26,7 +28,7 @@ class Seq2SeqEncode(Layer):
                                    return_state=True,
                                    recurrent_initializer="he_normal")
 
-    def __call__(self, x):
+    def __call__(self, x, state):
         """
         :input:
             - x: [batch_size, max_length]
@@ -37,9 +39,12 @@ class Seq2SeqEncode(Layer):
             - state_c: [batch_size, hidden_units] - Current Cell state
         """
         encode = self.embedding(x)
-        encode = self.encode_layer_1(encode)
-        encode, state_h, state_c = self.encode_layer_2(encode)
+        # encode = self.encode_layer_1(encode, state)
+        encode, state_h, state_c = self.encode_layer_2(encode, state)
         return encode, [state_h, state_c]
+
+    def _init_hidden_state_(self, batch_size):
+        return [tf.zeros([batch_size, self.hidden_units]), tf.zeros([batch_size, self.hidden_units])]
 
 
 class Seq2SeqDecode(Layer):
@@ -59,10 +64,9 @@ class Seq2SeqDecode(Layer):
                                    return_state=True,
                                    recurrent_initializer="he_normal")
         self.decode_layer_2 = LSTM(hidden_units,
-                                   return_sequences=True,
                                    return_state=True,
                                    recurrent_initializer="he_normal")
-        self.dense = tf.keras.layers.Dense(vocab_size)
+        self.dense = tf.keras.layers.Dense(vocab_size, activation="softmax")
 
     def __call__(self, x, state, **kwargs):
         """
@@ -79,7 +83,7 @@ class Seq2SeqDecode(Layer):
         """
 
         decode = self.embedding(x)  # [Batch_size, vocab_length, Embedding_size]
-        decode = self.decode_layer_1(decode, state)
-        decode, state_h, state_c = self.decode_layer_2(decode)
+        # decode = self.decode_layer_1(decode, state)
+        decode, state_h, state_c = self.decode_layer_2(decode, state)
         output_decode = self.dense(decode)
         return output_decode, [state_h, state_c]
