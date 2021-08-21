@@ -41,7 +41,7 @@ class Seq2SeqEncode(Layer):
         encode, state_h, state_c = self.encode_layer_2(encode, state)
         return encode, [state_h, state_c]
 
-    def _init_hidden_state_(self, batch_size):
+    def init_hidden_state_(self, batch_size):
         return [tf.zeros([batch_size, self.hidden_units]), tf.zeros([batch_size, self.hidden_units])]
 
 
@@ -65,7 +65,7 @@ class Seq2SeqDecode(Layer):
                                    return_sequences=True,
                                    return_state=True,
                                    recurrent_initializer="he_normal")
-        self.dense = tf.keras.layers.Dense(vocab_size)
+        self.dense = tf.keras.layers.Dense(vocab_size, activation="softmax")
 
     def __call__(self, x, state, **kwargs):
         """
@@ -86,3 +86,26 @@ class Seq2SeqDecode(Layer):
         decode, state_h, state_c = self.decode_layer_2(decode, state)
         output_decode = self.dense(decode)
         return output_decode, [state_h, state_c]
+
+
+class EncoderDecoder(Layer):
+    def __init__(self,
+                 inp_vocab_size,
+                 tar_vocab_size,
+                 embedding_size,
+                 hidden_units,
+                 batch_size):
+        super(EncoderDecoder, self).__init__()
+
+        self.encoder = Seq2SeqEncode(vocab_size=inp_vocab_size,
+                                     embedding_size=embedding_size,
+                                     hidden_units=hidden_units)
+        self.decoder = Seq2SeqDecode(vocab_size=tar_vocab_size,
+                                     embedding_size=embedding_size,
+                                     hidden_units=hidden_units)
+        self.first_state = self.encoder.init_hidden_state_(batch_size)
+
+    def call(self, inputs_encoder, inputs_decoder):
+        _, last_state = self.encoder(inputs_encoder, self.first_state)
+        output, _ = self.decoder(inputs_decoder, state=last_state)
+        return output
