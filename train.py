@@ -134,7 +134,7 @@ if __name__ == "__main__":
     # FIXME
     # Project Description
 
-    print('---------------------Welcome to ${name}-------------------')
+    print('---------------------Welcome to ${Hợp tác xã kiên trì}-------------------')
     print('Github: ${Xunino}')
     print('Email: ${ndlinh.ai@gmail.com}')
     print('---------------------------------------------------------------------')
