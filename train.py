@@ -1,4 +1,6 @@
 import os
+import time
+
 import numpy as np
 import tensorflow as tf
 
@@ -7,7 +9,7 @@ from data import DatasetLoader
 from argparse import ArgumentParser
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from model.tests.model_test import Seq2SeqEncode, Seq2SeqDecode, EncoderDecoder
+from model.tests.model_test import EncoderDecoder
 
 
 class MaskedSoftmaxCELoss(tf.keras.losses.Loss):
@@ -29,9 +31,8 @@ class MaskedSoftmaxCELoss(tf.keras.losses.Loss):
             ==> loss = loss * mask_matrix = [0, 5, 11, 40, 3, 0, 0, 0]
     """
 
-    def __init__(self, valid_len):
+    def __init__(self):
         super().__init__(reduction='none')
-        self.valid_len = valid_len  # valid_len shape: (batch_size,)
 
     def call(self, label, pred):
         """
@@ -73,16 +74,29 @@ class SequenceToSequence:
         self.BATCH_SIZE = batch_size
         self.EPOCHS = epochs
 
-    def train(self):
-        inp_tensor, tar_tensor, caches = DatasetLoader(self.inp_lang, self.tar_lang).build_dataset()
+        self.optimizer = tf.keras.optimizers.Adam()
 
-        net = EncoderDecoder(inp_vocab_size=caches[0].vocab_size,
-                             tar_vocab_size=caches[1].vocab_size,
+    def training(self, net, train_ds, N_BATCH):
+        for epoch in range(self.EPOCHS):
+            loss = 0
+            for batch_size, (x, y) in tqdm(enumerate(train_ds.take(N_BATCH)), total=N_BATCH):
+                with tf.GradientTape() as tape:
+                    decode_out = net(x, y, training=True)
+                    loss += MaskedSoftmaxCELoss()(y, decode_out)
+
+                train_vars = net.trainable_variables
+                grads = tape.gradient(loss, train_vars)
+                self.optimizer.apply_gradients(zip(grads, train_vars))
+            print(f'\nLoss: {loss}')
+
+    def run(self):
+        inp_tensor, tar_tensor, self.caches = DatasetLoader(self.inp_lang, self.tar_lang).build_dataset()
+
+        net = EncoderDecoder(inp_vocab_size=self.caches[0].vocab_size,
+                             tar_vocab_size=self.caches[1].vocab_size,
                              embedding_size=self.embedding_size,
                              hidden_units=self.hidden_units,
                              batch_size=self.BATCH_SIZE)
-
-        optimizer = tf.keras.optimizers.Adam()
 
         padded_sequences_vi = pad_sequences(inp_tensor,
                                             maxlen=self.max_length,
@@ -101,18 +115,9 @@ class SequenceToSequence:
         test_ds = tf.data.Dataset.from_tensor_slices((test_x, test_y)).batch(self.BATCH_SIZE)
 
         N_BATCH = train_x.shape[0] // self.BATCH_SIZE
-        for epoch in range(self.EPOCHS):
-            loss = 0
-            for batch_size, (x, y) in tqdm(enumerate(train_ds.take(N_BATCH)), total=N_BATCH):
-                with tf.GradientTape() as tape:
-                    decode_out = net(x, y)
-                    loss += MaskedSoftmaxCELoss(y)(y, decode_out)
 
-                train_vars = net.trainable_variables
-                grads = tape.gradient(loss, train_vars)
-                optimizer.apply_gradients(zip(grads, train_vars))
-
-            print(f'\nLoss: {loss}')
+        # Training
+        self.training(net, train_ds, N_BATCH)
 
 
 if __name__ == "__main__":
@@ -144,11 +149,11 @@ if __name__ == "__main__":
 
     # FIXME
     # Do Training
-    # SequenceToSequence("dataset/train.en.txt", "dataset/train.vi.txt").train()
+    # SequenceToSequence("dataset/train.en.txt", "dataset/train.vi.txt").run()
     SequenceToSequence(inp_lang=args.inp_lang,
                        tar_lang=args.tar_lang,
                        batch_size=args.batch_size,
                        embedding_size=args.embedding_size,
                        hidden_units=args.hidden_units,
                        test_split_size=args.test_split_size,
-                       epochs=args.epochs).train()
+                       epochs=args.epochs).run()

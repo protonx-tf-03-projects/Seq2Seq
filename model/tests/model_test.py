@@ -105,7 +105,7 @@ class EncoderDecoder(Layer):
                                      hidden_units=hidden_units)
         self.first_state = self.encoder.init_hidden_state_(batch_size)
 
-    def call(self, inputs_encoder, inputs_decoder):
+    def __call__(self, inputs_encoder, inputs_decoder, **kwargs):
         _, last_state = self.encoder(inputs_encoder, self.first_state)
         output, _ = self.decoder(inputs_decoder, state=last_state)
         return output
