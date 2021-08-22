@@ -28,9 +28,8 @@ if __name__ == '__main__':
     BATCH_SIZE = 32
 
     encoder = Seq2SeqEncode(vocab_size, embedding_size, hidden_unit, n_layers=1)
-    state = encoder._init_hidden_state_(BATCH_SIZE)
 
-    encode_output, last_state = encoder(tmp_x, state)
+    encode_output, last_state = encoder(tmp_x)
     print("================== Encoder ==================")
     print("Output encode: ", encode_output.shape)
     print("State_hidden: ", last_state[0].shape)

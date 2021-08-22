@@ -35,7 +35,12 @@ class BuildLanguage:
         return np.array([self.word2id[word] for word in sent.split(" ")])
 
     def vector_to_sentence(self, vector):
-        return " ".join([self.id2word[id] for id in vector])
+        sentence = []
+        for id in vector:
+            if id == 0:
+                break
+            sentence.append(self.id2word[id])
+        return " ".join(sentence)
 
 
 class DatasetLoader:
@@ -58,8 +63,8 @@ class DatasetLoader:
     def __init__(self,
                  language_1,
                  language_2,
-                 min_length=10,
-                 max_length=14):
+                 min_length=20,
+                 max_length=30):
         """
             Khởi tạo
 
