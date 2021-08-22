@@ -9,7 +9,7 @@ from data import DatasetLoader
 from argparse import ArgumentParser
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from model.tests.model_test import EncoderDecoder
+from model.tests.model_test import EncoderDecoder, Seq2SeqEncode, Seq2SeqDecode
 
 
 class MaskedSoftmaxCELoss(tf.keras.losses.Loss):
@@ -53,11 +53,11 @@ class SequenceToSequence:
                  inp_lang,
                  tar_lang,
                  embedding_size=64,
-                 hidden_units=256,
+                 hidden_units=128,
                  test_split_size=0.05,
-                 max_length=32,
+                 max_length=64,
                  epochs=400,
-                 batch_size=128):
+                 batch_size=64):
         self.inp_lang = inp_lang
         self.tar_lang = tar_lang
         self.embedding_size = embedding_size
@@ -76,14 +76,13 @@ class SequenceToSequence:
             loss = 0
             for batch_size, (x, y) in tqdm(enumerate(train_ds.take(N_BATCH)), total=N_BATCH):
                 with tf.GradientTape() as tape:
-                    bos = tf.reshape(tf.constant([self.caches[1].word2id['<sos>']] * y.shape[0]), shape=(-1, 1))
-                    dec_input = tf.concat([bos, y[:, :-1]], 1)  # Teacher forcing
+                    sos = tf.reshape(tf.constant([self.caches[1].word2id['<sos>']] * y.shape[0]), shape=(-1, 1))
+                    dec_input = tf.concat([sos, y[:, :-1]], 1)  # Teacher forcing
                     decode_out = net(x, dec_input, training=True)
                     loss += MaskedSoftmaxCELoss()(y, decode_out)
 
-                train_vars = net.trainable_variables
-                grads = tape.gradient(loss, train_vars)
-                self.optimizer.apply_gradients(zip(grads, train_vars))
+                grads = tape.gradient(loss, net.trainable_variables)
+                self.optimizer.apply_gradients(zip(grads, net.trainable_variables))
             print("\n=================================================================")
             print(f'Epoch {epoch + 1} -- Loss: {loss}')
 
@@ -99,22 +98,21 @@ class SequenceToSequence:
         # Preprocessing testing data
         for test_, test_y in test_ds.take(1):
             test_x = np.expand_dims(test_.numpy(), axis=0)
-            _, last_state = model.encoder(test_x, training=False)
+            first_state = model.encoder.init_hidden_state(batch_size=1)
+            _, last_state = model.encoder(test_x, first_state, training=False)
 
-            dec_X = np.expand_dims(np.array([self.caches[1].word2id['<sos>']]), axis=0)
+            dec_X = np.expand_dims(np.array([self.caches[1].word2id['<eos>']]), axis=0)
             sentence = []
-            for _ in range(30):
+            for _ in range(self.caches[1].max_len):
                 output, last_state = model.decoder(dec_X, last_state, training=False)
-                output = np.argmax(output, axis=2)
+                output = tf.argmax(output, axis=2).numpy()
+                dec_X = output
                 sentence.append(output[0][0])
 
-                if output[0][0] == self.caches[1].word2id["<eos>"]:
-                    break
-
             print("\n-----------------------------------------------------------------")
-            print("Input: ", self.caches[0].vector_to_sentence(test_.numpy()))
+            print("Input    : ", self.caches[0].vector_to_sentence(test_.numpy()))
             print("Predicted: ", self.caches[1].vector_to_sentence(sentence))
-            print("Target: ", self.caches[1].vector_to_sentence(test_y.numpy()))
+            print("Target   : ", self.caches[1].vector_to_sentence(test_y.numpy()))
             print("=================================================================\n")
 
     def run(self):
@@ -123,7 +121,8 @@ class SequenceToSequence:
         net = EncoderDecoder(inp_vocab_size=self.caches[0].vocab_size,
                              tar_vocab_size=self.caches[1].vocab_size,
                              embedding_size=self.embedding_size,
-                             hidden_units=self.hidden_units)
+                             hidden_units=self.hidden_units,
+                             batch_size=self.BATCH_SIZE)
 
         padded_sequences_vi = pad_sequences(inp_tensor,
                                             maxlen=self.max_length,
