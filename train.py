@@ -13,44 +13,54 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from model.tests.model_test import EncoderDecoder, Seq2SeqEncode, Seq2SeqDecode
 
 
-def remove_oov(sentence):
-    return [i for i in sentence.split(" ") if i not in ["<eos>", "<sos>"]]
+class Bleu_score:
+    """
+        We can evaluate a predicted sequence by comparing it with the label sequence.
+        BLEU (Bilingual Evaluation Understudy) "https://aclanthology.org/P02-1040.pdf",
+        though originally proposed for evaluating machine translation results,
+        has been extensively used in measuring the quality of output sequences for different applications.
+        In principle, for any n-grams in the predicted sequence, BLEU evaluates whether this n-grams appears
+        in the label sequence.
+    """
 
+    def __init__(self):
+        super().__init__()
 
-# n-grams
-# Tìm đoạn đúng dài nhất trong câu dự đoán trùng với trong câu đích
-def bleu_score(predicted_sentence, target_sentences, n_grams=3):
-    predicted_sentence = remove_oov(predicted_sentence)
-    target_sentences = remove_oov(target_sentences)
-    pred_length = len(predicted_sentence)
-    target_length = len(target_sentences)
-    score = np.exp(np.minimum(0, 1 - target_length / pred_length))
-    for k in range(1, n_grams + 1):
-        label_subs = collections.defaultdict(int)
-        num_matches = 0
-        for i in range(target_length - k + 1):
-            label_subs[" ".join(target_sentences[i:i + k])] += 1
-        for i in range(pred_length - k + 1):
-            if label_subs[" ".join(predicted_sentence[i:i + k])] > 0:
-                label_subs[" ".join(predicted_sentence[i:i + k])] -= 1
-                num_matches += 1
-        score *= np.power(num_matches / (pred_length - k + 1), np.power(0.5, k))
-    return score
+    def remove_oov(self, sentence):
+        return [i for i in sentence.split(" ") if i not in ["<eos>", "<sos>"]]
+
+    def __call__(self, predicted_sentence, target_sentences, n_grams=3):
+        predicted_sentence = self.remove_oov(predicted_sentence)
+        target_sentences = self.remove_oov(target_sentences)
+        pred_length = len(predicted_sentence)
+        target_length = len(target_sentences)
+        score = np.exp(np.minimum(0, 1 - target_length / pred_length))
+        for k in range(1, n_grams + 1):
+            label_subs = collections.defaultdict(int)
+            for i in range(target_length - k + 1):
+                label_subs[" ".join(target_sentences[i:i + k])] += 1
+
+            num_matches = 0
+            for i in range(pred_length - k + 1):
+                if label_subs[" ".join(predicted_sentence[i:i + k])] > 0:
+                    label_subs[" ".join(predicted_sentence[i:i + k])] -= 1
+                    num_matches += 1
+            score *= np.power(num_matches / (pred_length - k + 1), np.power(0.5, k))
+        return score
 
 
 class MaskedSoftmaxCELoss(tf.keras.losses.Loss):
     """
         The softmax cross-entropy loss with masks.
 
-        Focus calculate positive loss between y_pred and y_true points
-        (Tính giá trị mất mát tập chung các vị trí xuất hiện (Y_hat) từ giống với giá trị gốc (Y_true):)
+        Tính giá trị mất mát tập chung các vị trí xuất hiện (Y_hat) từ giống với giá trị gốc (Y_true):
 
-        Ex: Simple Mask_matrix
-            input:
+        Ví dụ cơ bản:
+            Đầu vào:
                 pred_matrix = [1, 25, 1445, 105, 5, 4, 8, 2]
                 true_matrix = [0, 20, 1456, 145, 2, 0, 0, 0]
 
-            Calculate loss with mask matrix for flowing true_matrix:
+            Chỗ nào có giá trị khác 0 tại true_matrix gán bằng giá trị 1:
             mask_matrix = [0, 1, 1, 1, 1, 0, 0, 0]
 
             loss = true_matrix - pred_matrix = [1, 0, 11, 40, 0, 4, 8, 2]
@@ -79,11 +89,11 @@ class SequenceToSequence:
                  inp_lang,
                  tar_lang,
                  embedding_size=64,
-                 hidden_units=128,
-                 test_split_size=0.05,
-                 max_length=64,
+                 hidden_units=256,
+                 test_split_size=0.01,
+                 max_length=32,
                  epochs=400,
-                 batch_size=64):
+                 batch_size=128):
         self.inp_lang = inp_lang
         self.tar_lang = tar_lang
         self.embedding_size = embedding_size
@@ -109,8 +119,10 @@ class SequenceToSequence:
 
                 grads = tape.gradient(loss, net.trainable_variables)
                 self.optimizer.apply_gradients(zip(grads, net.trainable_variables))
+
+            bleu_score = self.evaluation(net, test_ds)
             print("\n=================================================================")
-            print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {self.evaluation(net, test_ds)}')
+            print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
             print("=================================================================\n")
 
     def evaluation(self, model, test_ds, debug=False):
@@ -123,7 +135,7 @@ class SequenceToSequence:
         # Preprocessing testing data
         score = 0.0
         test_ds_len = len(test_ds)
-        for test_, test_y in test_ds.take(100):
+        for test_, test_y in test_ds:
             test_x = np.expand_dims(test_.numpy(), axis=0)
             first_state = model.encoder.init_hidden_state(batch_size=1)
             _, last_state = model.encoder(test_x, first_state, training=False)
@@ -136,8 +148,8 @@ class SequenceToSequence:
                 dec_X = output
                 sentence.append(output[0][0])
 
-            score += bleu_score(self.caches[1].vector_to_sentence(sentence),
-                                self.caches[1].vector_to_sentence(test_y.numpy()))
+            score += Bleu_score()(self.caches[1].vector_to_sentence(sentence),
+                                  self.caches[1].vector_to_sentence(test_y.numpy()))
             if debug:
                 print("\n-----------------------------------------------------------------")
                 print("Input    : ", self.caches[0].vector_to_sentence(test_.numpy()))
