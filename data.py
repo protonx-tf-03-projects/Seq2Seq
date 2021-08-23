@@ -63,8 +63,8 @@ class DatasetLoader:
     def __init__(self,
                  language_1,
                  language_2,
-                 min_length=20,
-                 max_length=30):
+                 min_length=10,
+                 max_length=14):
         """
             Khởi tạo
 

@@ -16,7 +16,6 @@ if __name__ == '__main__':
 
     train_x = tf.data.Dataset.from_tensor_slices((train_x, train_y))
     test_x = tf.data.Dataset.from_tensor_slices((test_x, test_y))
-
     train_x = train_x.batch(32)
     tmp_x, tmp_y = next(iter(train_x))
 
@@ -28,8 +27,9 @@ if __name__ == '__main__':
     BATCH_SIZE = 32
 
     encoder = Seq2SeqEncode(vocab_size, embedding_size, hidden_unit, n_layers=1)
+    first_state = encoder.init_hidden_state(BATCH_SIZE)
 
-    encode_output, last_state = encoder(tmp_x)
+    encode_output, last_state = encoder(tmp_x, first_state)
     print("================== Encoder ==================")
     print("Output encode: ", encode_output.shape)
     print("State_hidden: ", last_state[0].shape)

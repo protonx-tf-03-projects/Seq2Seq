@@ -1,5 +1,6 @@
 import os
 import time
+import collections
 
 import numpy as np
 import tensorflow as tf
@@ -10,6 +11,31 @@ from argparse import ArgumentParser
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from model.tests.model_test import EncoderDecoder, Seq2SeqEncode, Seq2SeqDecode
+
+
+def remove_oov(sentence):
+    return [i for i in sentence.split(" ") if i not in ["<eos>", "<sos>"]]
+
+
+# n-grams
+# Tìm đoạn đúng dài nhất trong câu dự đoán trùng với trong câu đích
+def bleu_score(predicted_sentence, target_sentences, n_grams=3):
+    predicted_sentence = remove_oov(predicted_sentence)
+    target_sentences = remove_oov(target_sentences)
+    pred_length = len(predicted_sentence)
+    target_length = len(target_sentences)
+    score = np.exp(np.minimum(0, 1 - target_length / pred_length))
+    for k in range(1, n_grams + 1):
+        label_subs = collections.defaultdict(int)
+        num_matches = 0
+        for i in range(target_length - k + 1):
+            label_subs[" ".join(target_sentences[i:i + k])] += 1
+        for i in range(pred_length - k + 1):
+            if label_subs[" ".join(predicted_sentence[i:i + k])] > 0:
+                label_subs[" ".join(predicted_sentence[i:i + k])] -= 1
+                num_matches += 1
+        score *= np.power(num_matches / (pred_length - k + 1), np.power(0.5, k))
+    return score
 
 
 class MaskedSoftmaxCELoss(tf.keras.losses.Loss):
@@ -84,19 +110,20 @@ class SequenceToSequence:
                 grads = tape.gradient(loss, net.trainable_variables)
                 self.optimizer.apply_gradients(zip(grads, net.trainable_variables))
             print("\n=================================================================")
-            print(f'Epoch {epoch + 1} -- Loss: {loss}')
+            print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {self.evaluation(net, test_ds)}')
+            print("=================================================================\n")
 
-            # Evaluate
-            self.evaluation(net, test_ds)
-
-    def evaluation(self, model, test_ds):
+    def evaluation(self, model, test_ds, debug=False):
         """
         :param model: Seq2Seq
         :param test_ds: (inp_vocab, tar_vocab)
+        :param caches: (inp_lang, tar_lang)
         :return:
         """
         # Preprocessing testing data
-        for test_, test_y in test_ds.take(1):
+        score = 0.0
+        test_ds_len = len(test_ds)
+        for test_, test_y in test_ds.take(100):
             test_x = np.expand_dims(test_.numpy(), axis=0)
             first_state = model.encoder.init_hidden_state(batch_size=1)
             _, last_state = model.encoder(test_x, first_state, training=False)
@@ -109,11 +136,15 @@ class SequenceToSequence:
                 dec_X = output
                 sentence.append(output[0][0])
 
-            print("\n-----------------------------------------------------------------")
-            print("Input    : ", self.caches[0].vector_to_sentence(test_.numpy()))
-            print("Predicted: ", self.caches[1].vector_to_sentence(sentence))
-            print("Target   : ", self.caches[1].vector_to_sentence(test_y.numpy()))
-            print("=================================================================\n")
+            score += bleu_score(self.caches[1].vector_to_sentence(sentence),
+                                self.caches[1].vector_to_sentence(test_y.numpy()))
+            if debug:
+                print("\n-----------------------------------------------------------------")
+                print("Input    : ", self.caches[0].vector_to_sentence(test_.numpy()))
+                print("Predicted: ", self.caches[1].vector_to_sentence(sentence))
+                print("Target   : ", self.caches[1].vector_to_sentence(test_y.numpy()))
+                print("=================================================================\n")
+        return score / test_ds_len
 
     def run(self):
         inp_tensor, tar_tensor, self.caches = DatasetLoader(self.inp_lang, self.tar_lang).build_dataset()
@@ -151,13 +182,13 @@ if __name__ == "__main__":
 
     # FIXME
     # Arguments users used when running command lines
-    # parser.add_argument("--inp-lang", required=True, type=str)
-    # parser.add_argument("--tar-lang", required=True, type=str)
-    # parser.add_argument("--batch_size", default=64, type=int)
-    # parser.add_argument("--epochs", default=1000, type=int)
-    # parser.add_argument("--embedding_size", default=64, type=int)
-    # parser.add_argument("--hidden_units", default=256, type=int)
-    # parser.add_argument("--test_split_size", default=0.1, type=int)
+    parser.add_argument("--inp-lang", required=True, type=str)
+    parser.add_argument("--tar-lang", required=True, type=str)
+    parser.add_argument("--batch_size", default=64, type=int)
+    parser.add_argument("--epochs", default=1000, type=int)
+    parser.add_argument("--embedding_size", default=64, type=int)
+    parser.add_argument("--hidden_units", default=256, type=int)
+    parser.add_argument("--test_split_size", default=0.1, type=int)
 
     home_dir = os.getcwd()
     args = parser.parse_args()
@@ -175,11 +206,11 @@ if __name__ == "__main__":
 
     # FIXME
     # Do Training
-    SequenceToSequence("dataset/train.en.txt", "dataset/train.vi.txt").run()
-    # SequenceToSequence(inp_lang=args.inp_lang,
-    #                    tar_lang=args.tar_lang,
-    #                    batch_size=args.batch_size,
-    #                    embedding_size=args.embedding_size,
-    #                    hidden_units=args.hidden_units,
-    #                    test_split_size=args.test_split_size,
-    #                    epochs=args.epochs).run()
+    # SequenceToSequence("dataset/train.en.txt", "dataset/train.vi.txt").run()
+    SequenceToSequence(inp_lang=args.inp_lang,
+                       tar_lang=args.tar_lang,
+                       batch_size=args.batch_size,
+                       embedding_size=args.embedding_size,
+                       hidden_units=args.hidden_units,
+                       test_split_size=args.test_split_size,
+                       epochs=args.epochs).run()
