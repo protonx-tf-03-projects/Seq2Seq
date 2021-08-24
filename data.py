@@ -116,12 +116,11 @@ class DatasetLoader:
         inp_vector = [inp_lang.sentence_to_vector(line) for line in inp_lang.lines]
         tar_vector = [tar_lang.sentence_to_vector(line) for line in tar_lang.lines]
 
-        caches = (inp_lang, tar_lang)
         if debug:
             for vector, sentence in zip(inp_vector[:5], inp_lang.lines[:5]):
                 print("Vector: {}\nSentence: {}\n\n".format(vector, sentence))
 
-        return inp_vector, tar_vector, caches
+        return inp_vector, tar_vector, inp_lang, tar_lang
 
     def remove_punctuation_digits(self, sen):
         """

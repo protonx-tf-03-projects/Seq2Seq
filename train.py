@@ -86,16 +86,16 @@ class MaskedSoftmaxCELoss(tf.keras.losses.Loss):
 
 class SequenceToSequence:
     def __init__(self,
-                 inp_lang,
-                 tar_lang,
+                 inp_lang_path,
+                 tar_lang_path,
                  embedding_size=64,
                  hidden_units=256,
                  test_split_size=0.01,
                  max_length=32,
                  epochs=400,
                  batch_size=128):
-        self.inp_lang = inp_lang
-        self.tar_lang = tar_lang
+        self.inp_lang_path = inp_lang_path
+        self.tar_lang_path = tar_lang_path
         self.embedding_size = embedding_size
         self.hidden_units = hidden_units
 
@@ -112,7 +112,7 @@ class SequenceToSequence:
             loss = 0
             for batch_size, (x, y) in tqdm(enumerate(train_ds.take(N_BATCH)), total=N_BATCH):
                 with tf.GradientTape() as tape:
-                    sos = tf.reshape(tf.constant([self.caches[1].word2id['<sos>']] * y.shape[0]), shape=(-1, 1))
+                    sos = tf.reshape(tf.constant([self.tar_lang.word2id['<sos>']] * y.shape[0]), shape=(-1, 1))
                     dec_input = tf.concat([sos, y[:, :-1]], 1)  # Teacher forcing
                     decode_out = net(x, dec_input, training=True)
                     loss += MaskedSoftmaxCELoss()(y, decode_out)
@@ -140,29 +140,32 @@ class SequenceToSequence:
             first_state = model.encoder.init_hidden_state(batch_size=1)
             _, last_state = model.encoder(test_x, first_state, training=False)
 
-            dec_X = np.expand_dims(np.array([self.caches[1].word2id['<eos>']]), axis=0)
+            dec_X = np.expand_dims(np.array([self.tar_lang.word2id['<eos>']]), axis=0)
             sentence = []
-            for _ in range(self.caches[1].max_len):
+            for _ in range(self.tar_lang.max_len):
                 output, last_state = model.decoder(dec_X, last_state, training=False)
                 output = tf.argmax(output, axis=2).numpy()
                 dec_X = output
                 sentence.append(output[0][0])
 
-            score += Bleu_score()(self.caches[1].vector_to_sentence(sentence),
-                                  self.caches[1].vector_to_sentence(test_y.numpy()))
+            score += Bleu_score()(self.tar_lang.vector_to_sentence(sentence),
+                                  self.tar_lang.vector_to_sentence(test_y.numpy()))
             if debug:
                 print("\n-----------------------------------------------------------------")
-                print("Input    : ", self.caches[0].vector_to_sentence(test_.numpy()))
-                print("Predicted: ", self.caches[1].vector_to_sentence(sentence))
-                print("Target   : ", self.caches[1].vector_to_sentence(test_y.numpy()))
+                print("Input    : ", self.inp_lang.vector_to_sentence(test_.numpy()))
+                print("Predicted: ", self.tar_lang.vector_to_sentence(sentence))
+                print("Target   : ", self.tar_lang.vector_to_sentence(test_y.numpy()))
                 print("=================================================================\n")
         return score / test_ds_len
 
     def run(self):
-        inp_tensor, tar_tensor, self.caches = DatasetLoader(self.inp_lang, self.tar_lang).build_dataset()
+        inp_tensor, tar_tensor, self.inp_lang, self.tar_lang = DatasetLoader(self.inp_lang_path,
+                                                                             self.tar_lang_path,
+                                                                             min_length=10,
+                                                                             max_length=14).build_dataset()
 
-        net = EncoderDecoder(inp_vocab_size=self.caches[0].vocab_size,
-                             tar_vocab_size=self.caches[1].vocab_size,
+        net = EncoderDecoder(inp_vocab_size=self.inp_lang.vocab_size,
+                             tar_vocab_size=self.tar_lang.vocab_size,
                              embedding_size=self.embedding_size,
                              hidden_units=self.hidden_units,
                              batch_size=self.BATCH_SIZE)
@@ -183,7 +186,7 @@ class SequenceToSequence:
         train_ds = tf.data.Dataset.from_tensor_slices((train_x, train_y)).batch(self.BATCH_SIZE)
         test_ds = tf.data.Dataset.from_tensor_slices((test_x, test_y))
 
-        N_BATCH = train_x.shape[0] // self.BATCH_SIZE
+        N_BATCH = train_x.shape[0] // self.BATCH_SIZE + 1
 
         # Training
         self.training(net, train_ds, test_ds, N_BATCH)
@@ -219,8 +222,8 @@ if __name__ == "__main__":
     # FIXME
     # Do Training
     # SequenceToSequence("dataset/train.en.txt", "dataset/train.vi.txt").run()
-    SequenceToSequence(inp_lang=args.inp_lang,
-                       tar_lang=args.tar_lang,
+    SequenceToSequence(inp_lang_path=args.inp_lang,
+                       tar_lang_path=args.tar_lang,
                        batch_size=args.batch_size,
                        embedding_size=args.embedding_size,
                        hidden_units=args.hidden_units,
