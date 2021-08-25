@@ -20,11 +20,11 @@ class Seq2SeqEncode(Layer):
         self.encode_layer_1 = LSTM(hidden_units,
                                    return_sequences=True,
                                    return_state=True,
-                                   recurrent_initializer="he_normal")
+                                   kernel_initializer="he_normal")
         self.encode_layer_2 = LSTM(hidden_units,
                                    return_sequences=True,
                                    return_state=True,
-                                   recurrent_initializer="he_normal")
+                                   kernel_initializer="he_normal")
 
     def __call__(self, x, first_state, *args, **kwargs):
         """
@@ -37,8 +37,8 @@ class Seq2SeqEncode(Layer):
             - state_c: [batch_size, hidden_units] - Current Cell state
         """
         encode = self.embedding(x)
-        decode, state_h, state_c = self.encode_layer_1(encode, first_state, **kwargs)
-        # encode, state_h, state_c = self.encode_layer_2(encode, **kwargs)
+        encode, state_h, state_c = self.encode_layer_1(encode, first_state, **kwargs)
+        encode, state_h, state_c = self.encode_layer_2(encode, **kwargs)
         return encode, [state_h, state_c]
 
     def init_hidden_state(self, batch_size):
@@ -60,12 +60,12 @@ class Seq2SeqDecode(Layer):
         self.decode_layer_1 = LSTM(hidden_units,
                                    return_sequences=True,
                                    return_state=True,
-                                   recurrent_initializer="he_normal")
+                                   kernel_initializer="he_normal")
         self.decode_layer_2 = LSTM(hidden_units,
                                    return_sequences=True,
                                    return_state=True,
-                                   recurrent_initializer="he_normal")
-        self.dense = tf.keras.layers.Dense(vocab_size, activation="linear")
+                                   kernel_initializer="he_normal")
+        self.dense = Dense(vocab_size, activation="linear", use_bias=False)
 
     def __call__(self, x, state, *args, **kwargs):
         """
@@ -83,7 +83,7 @@ class Seq2SeqDecode(Layer):
 
         decode = self.embedding(x)  # [Batch_size, vocab_length, Embedding_size]
         decode, state_h, state_c = self.decode_layer_1(decode, state, **kwargs)
-        # decode, state_h, state_c = self.decode_layer_2(decode, **kwargs)
+        decode, state_h, state_c = self.decode_layer_2(decode, **kwargs)
         output_decode = self.dense(decode)
         return output_decode, [state_h, state_c]
 
