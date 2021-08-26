@@ -38,7 +38,7 @@ class Seq2SeqEncode(Layer):
         """
         encode = self.embedding(x)
         encode, state_h, state_c = self.encode_layer_1(encode, first_state, **kwargs)
-        encode, state_h, state_c = self.encode_layer_2(encode, **kwargs)
+        # encode, state_h, state_c = self.encode_layer_2(encode, **kwargs)
         return encode, [state_h, state_c]
 
     def init_hidden_state(self, batch_size):
@@ -83,7 +83,7 @@ class Seq2SeqDecode(Layer):
 
         decode = self.embedding(x)  # [Batch_size, vocab_length, Embedding_size]
         decode, state_h, state_c = self.decode_layer_1(decode, state, **kwargs)
-        decode, state_h, state_c = self.decode_layer_2(decode, **kwargs)
+        # decode, state_h, state_c = self.decode_layer_2(decode, **kwargs)
         output_decode = self.dense(decode)
         return output_decode, [state_h, state_c]
 
