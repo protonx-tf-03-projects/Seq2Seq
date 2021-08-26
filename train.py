@@ -139,7 +139,7 @@ class SequenceToSequence:
             for batch_size, (x, y) in tqdm(enumerate(train_ds.take(N_BATCH)), total=N_BATCH):
                 loss = 0
                 with tf.GradientTape() as tape:
-                    dec_input = tf.constant([self.tar_lang.word2id['<sos>']] * y.shape[0])
+                    dec_input = tf.constant([self.tar_lang.word2id['<sos>']] * N_BATCH)
                     for i in range(1, y.shape[1]):
                         decode_out = net(x, dec_input, training=True)
                         loss += MaskedSoftmaxCELoss()(y[:, i], decode_out)
@@ -274,7 +274,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", default=128, type=int)
     parser.add_argument("--epochs", default=1000, type=int)
     parser.add_argument("--embedding-size", default=64, type=int)
-    parser.add_argument("--hidden_units", default=128, type=int)
+    parser.add_argument("--hidden_units", default=256, type=int)
     parser.add_argument("--min-sentence", default=10, type=int)
     parser.add_argument("--max-sentence", default=14, type=int)
     parser.add_argument("--test-split-size", default=0.01, type=float)
