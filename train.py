@@ -34,7 +34,7 @@ class Bleu_score:
         target_sentences = self.remove_oov(target_sentences)
         pred_length = len(predicted_sentence)
         target_length = len(target_sentences)
-        if pred_length == 0 or pred_length != target_length:
+        if pred_length == 0:
             return 0
 
         score = np.exp(np.minimum(0, 1 - target_length / pred_length))
