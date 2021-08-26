@@ -120,7 +120,7 @@ class SequenceToSequence:
             loss = 0
             for batch_size, (x, y) in tqdm(enumerate(train_ds.take(N_BATCH)), total=N_BATCH):
                 with tf.GradientTape() as tape:
-                    sos = tf.reshape(tf.constant([self.tar_lang.word2id['<sos>']] * y.shape[0]), shape=(-1, 1))
+                    sos = tf.reshape(tf.constant([self.tar_lang.word2id['<sos>']] * N_BATCH), shape=(-1, 1))
                     dec_input = tf.concat([sos, y[:, :-1]], 1)  # Teacher forcing
                     decode_out = net(x, dec_input, training=True)
                     loss += MaskedSoftmaxCELoss()(y, decode_out)
