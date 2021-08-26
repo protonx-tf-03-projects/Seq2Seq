@@ -186,7 +186,7 @@ class SequenceToSequence:
                                                             padded_sequences_en,
                                                             test_size=self.test_split_size)
 
-        train_ds = tf.data.Dataset.from_tensor_slices((train_x, train_y))
+        train_ds = tf.data.Dataset.from_tensor_slices((train_x, train_y)).batch(self.BATCH_SIZE)
         test_ds = tf.data.Dataset.from_tensor_slices((test_x, test_y))
 
         N_BATCH = train_x.shape[0] // self.BATCH_SIZE
