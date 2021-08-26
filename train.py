@@ -133,6 +133,27 @@ class SequenceToSequence:
             print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
             print("=================================================================\n")
 
+    def training_with_attention(self, net, train_ds, test_ds, N_BATCH):
+        for epoch in range(self.EPOCHS):
+            total_loss = 0
+            for batch_size, (x, y) in tqdm(enumerate(train_ds.take(N_BATCH)), total=N_BATCH):
+                loss = 0
+                with tf.GradientTape() as tape:
+                    dec_input = tf.constant([self.tar_lang.word2id['<sos>']] * y.shape[0])
+                    for i in range(1, y.shape[1]):
+                        decode_out = net(x, dec_input, training=True)
+                        loss += MaskedSoftmaxCELoss()(y[:, i], decode_out)
+                        dec_input = y[:, i]
+
+                grads = tape.gradient(loss, net.trainable_variables)
+                self.optimizer.apply_gradients(zip(grads, net.trainable_variables))
+                total_loss += loss
+
+            bleu_score = self.evaluation_with_attention(net, test_ds, self.debug)
+            print("\n=================================================================")
+            print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {bleu_score}')
+            print("=================================================================\n")
+
     def evaluation(self, model, test_ds, debug=False):
         """
         :param model: Seq2Seq
@@ -141,8 +162,8 @@ class SequenceToSequence:
         :return:
         """
         # Preprocessing testing data
-        test_ds_len = len(test_ds)
         score = 0.0
+        test_ds_len = len(test_ds)
         count = 0
         for test_, test_y in test_ds:
             test_x = np.expand_dims(test_.numpy(), axis=0)
@@ -156,6 +177,41 @@ class SequenceToSequence:
                 output = tf.argmax(output, axis=2).numpy()
                 input_decode = output
                 sentence.append(output[0][0])
+            score += Bleu_score()(self.tar_lang.vector_to_sentence(sentence),
+                                  self.tar_lang.vector_to_sentence(test_y.numpy()))
+            if debug and count <= 5:
+                print("-----------------------------------------------------------------")
+                print("Input    : ", self.inp_lang.vector_to_sentence(test_.numpy()))
+                print("Predicted: ", self.tar_lang.vector_to_sentence(sentence))
+                print("Target   : ", self.tar_lang.vector_to_sentence(test_y.numpy()))
+                print("=================================================================")
+            count += 1
+        return score / test_ds_len
+
+    def evaluation_with_attention(self, model, test_ds, debug=True):
+        """
+        :param model: Seq2Seq
+        :param test_ds: (inp_vocab, tar_vocab)
+        :param caches: (inp_lang, tar_lang)
+        :return:
+        """
+        # Preprocessing testing data
+        score = 0.0
+        test_ds_len = len(test_ds)
+        count = 0
+        for test_, test_y in test_ds:
+            test_x = np.expand_dims(test_.numpy(), axis=0)
+            first_state = model.encoder.init_hidden_state(batch_size=1)
+            encode_outs, last_state = model.encoder(test_x, first_state, training=False)
+
+            input_decode = np.array([self.tar_lang.word2id['<eos>']])
+            sentence = []
+            for _ in range(self.tar_lang.max_len):
+                output, last_state = model.decoder(input_decode, encode_outs, last_state, training=False)
+                output = tf.argmax(output, axis=1).numpy()
+                input_decode = output
+                sentence.append(output[0])
+
             score += Bleu_score()(self.tar_lang.vector_to_sentence(sentence),
                                   self.tar_lang.vector_to_sentence(test_y.numpy()))
             if debug and count <= 5:
@@ -192,12 +248,20 @@ class SequenceToSequence:
         N_BATCH = train_x.shape[0] // self.BATCH_SIZE
 
         # Training
-        net = EncoderDecoder(inp_vocab_size=self.inp_lang.vocab_size,
-                             tar_vocab_size=self.tar_lang.vocab_size,
-                             embedding_size=self.embedding_size,
-                             hidden_units=self.hidden_units,
-                             batch_size=self.BATCH_SIZE)
-        self.training(net, train_ds, test_ds, N_BATCH)
+        if self.mode_training.lower() == "attention":
+            net = AttentionEncoderDecoder(inp_vocab_size=self.inp_lang.vocab_size,
+                                          tar_vocab_size=self.tar_lang.vocab_size,
+                                          embedding_size=self.embedding_size,
+                                          hidden_units=self.hidden_units,
+                                          batch_size=self.BATCH_SIZE)
+            self.training_with_attention(net, train_ds, test_ds, N_BATCH)
+        else:
+            net = EncoderDecoder(inp_vocab_size=self.inp_lang.vocab_size,
+                                 tar_vocab_size=self.tar_lang.vocab_size,
+                                 embedding_size=self.embedding_size,
+                                 hidden_units=self.hidden_units,
+                                 batch_size=self.BATCH_SIZE)
+            self.training(net, train_ds, test_ds, N_BATCH)
 
 
 if __name__ == "__main__":
