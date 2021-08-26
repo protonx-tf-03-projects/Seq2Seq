@@ -274,7 +274,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", default=128, type=int)
     parser.add_argument("--epochs", default=1000, type=int)
     parser.add_argument("--embedding-size", default=64, type=int)
-    parser.add_argument("--hidden_units", default=256, type=int)
+    parser.add_argument("--hidden-units", default=256, type=int)
     parser.add_argument("--min-sentence", default=10, type=int)
     parser.add_argument("--max-sentence", default=14, type=int)
     parser.add_argument("--test-split-size", default=0.01, type=float)
@@ -310,4 +310,4 @@ if __name__ == "__main__":
                        mode_training=args.mode_training,
                        debug=args.debug).run()
 
-    ## python train.py --inp-lang="dataset/train.en.txt" --tar-lang="dataset/train.vi.txt"
+    # python train.py --inp-lang="dataset/train.en.txt" --tar-lang="dataset/train.vi.txt" --hidden-units=256 --embedding-size=128 --epochs=200 --test-split-size=0.01 --mode-training="attention" --debug=True

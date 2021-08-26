@@ -1,5 +1,6 @@
 import string
 import re
+import os
 import numpy as np
 
 
@@ -90,8 +91,9 @@ class DatasetLoader:
 
         :return: Trả về dữ liệu dạng list
         """
-        raw_origin_language = open(self.language_1, encoding="UTF-8").read().strip().split("\n")
-        raw_target_language = open(self.language_2, encoding="UTF-8").read().strip().split("\n")
+        current_dir = os.getcwd() + "/"
+        raw_origin_language = open(current_dir + self.language_1, encoding="UTF-8").read().strip().split("\n")
+        raw_target_language = open(current_dir + self.language_2, encoding="UTF-8").read().strip().split("\n")
         assert len(raw_target_language) == len(raw_origin_language)
 
         return raw_origin_language, raw_target_language
@@ -169,4 +171,4 @@ class DatasetLoader:
 
 if __name__ == '__main__':
     data = DatasetLoader("dataset/train.vi.txt", "dataset/train.en.txt")
-    processed_original_language, processed_target_language, caches = data.build_dataset(True)
+    processed_original_language, processed_target_language, _, _ = data.build_dataset(True)
