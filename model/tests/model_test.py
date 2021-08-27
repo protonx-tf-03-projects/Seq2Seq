@@ -56,7 +56,7 @@ class Seq2SeqDecode(tf.keras.models.Model):
                                    return_sequences=True,
                                    return_state=True,
                                    kernel_initializer="he_normal")
-        self.dense = Dense(vocab_size, use_bias=False)
+        self.dense = Dense(vocab_size, activation="linear", use_bias=False)
 
     def __call__(self, x, state, *args, **kwargs):
         """
@@ -87,7 +87,7 @@ class Bahdanau_Attention(Layer):
         super(Bahdanau_Attention, self).__init__(**kwargs)
         self.weight_output_encoder = Dense(hidden_units)
         self.weight_state_h = Dense(hidden_units)
-        self.score = Dense(1)
+        self.score = Dense(1, activation="linear", use_bias=False)
 
     def __call__(self, encode_output, state, *args, **kwargs):
         """
@@ -127,7 +127,7 @@ class AttentionSeq2SeqDecode(tf.keras.models.Model):
                                    return_state=True,
                                    recurrent_initializer="he_normal")
         self.attention = Bahdanau_Attention(hidden_units=hidden_units * 2)
-        self.dense = tf.keras.layers.Dense(vocab_size, activation="linear")
+        self.dense = Dense(vocab_size, activation="linear", use_bias=False)
 
     def __call__(self, x, encode_output, state, *args, **kwargs):
         """
