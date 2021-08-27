@@ -137,7 +137,7 @@ class SequenceToSequence:
     def training(self, train_ds, N_BATCH):
         for epoch in range(self.EPOCHS):
             loss = 0
-            for batch_size, (x, y) in tqdm(enumerate(train_ds.take(N_BATCH)), total=N_BATCH):
+            for batch_size, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
                 with tf.GradientTape() as tape:
                     encoder_outs, last_state = self.encoder(x, self.first_state)
                     sos = tf.reshape(tf.constant([self.tar_lang.word2id['<sos>']] * self.BATCH_SIZE), shape=(-1, 1))
@@ -157,7 +157,7 @@ class SequenceToSequence:
     def training_with_attention(self, train_ds, N_BATCH):
         for epoch in range(self.EPOCHS):
             total_loss = 0
-            for batch_size, (x, y) in tqdm(enumerate(train_ds.take(N_BATCH)), total=N_BATCH):
+            for batch_size, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
                 loss = 0
                 with tf.GradientTape() as tape:
                     encoder_outs, last_state = self.encoder(x, self.first_state)
@@ -258,11 +258,8 @@ class SequenceToSequence:
                                 padding="post",
                                 truncating="post")
 
-        # train_x, test_x, train_y, test_y = train_test_split(padded_sequences_vi,
-        #                                                     padded_sequences_en,
-        #                                                     test_size=self.test_split_size)
         # Add to tensor
-        train_ds = tf.data.Dataset.from_tensor_slices((train_x, train_y)).batch(self.BATCH_SIZE)
+        train_ds = tf.data.Dataset.from_tensor_slices((train_x, train_y))
 
         N_BATCH = train_x.shape[0] // self.BATCH_SIZE
 
