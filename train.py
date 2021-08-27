@@ -38,19 +38,19 @@ class Bleu_score:
 
         if pred_length == 0 and pred_length != target_length:
             return 0
+        else:
+            score = np.exp(np.minimum(0, 1 - target_length / pred_length))
+            for k in range(1, n_grams + 1):
+                label_subs = collections.defaultdict(int)
+                for i in range(target_length - k + 1):
+                    label_subs[" ".join(target_sentences[i:i + k])] += 1
 
-        score = np.exp(np.minimum(0, 1 - target_length / pred_length))
-        for k in range(1, n_grams + 1):
-            label_subs = collections.defaultdict(int)
-            for i in range(target_length - k + 1):
-                label_subs[" ".join(target_sentences[i:i + k])] += 1
-
-            num_matches = 0
-            for i in range(pred_length - k + 1):
-                if label_subs[" ".join(predicted_sentence[i:i + k])] > 0:
-                    label_subs[" ".join(predicted_sentence[i:i + k])] -= 1
-                    num_matches += 1
-            score *= np.power(num_matches / (pred_length - k + 1), np.power(0.5, k))
+                num_matches = 0
+                for i in range(pred_length - k + 1):
+                    if label_subs[" ".join(predicted_sentence[i:i + k])] > 0:
+                        label_subs[" ".join(predicted_sentence[i:i + k])] -= 1
+                        num_matches += 1
+                score *= np.power(num_matches / (pred_length - k + 1), np.power(0.5, k))
         return score
 
 
