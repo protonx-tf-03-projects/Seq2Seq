@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Layer, Embedding, LSTM, Dense
 
 
-class Seq2SeqEncode(Layer):
+class Seq2SeqEncode(tf.keras.models.Model):
 
     def __init__(self, vocab_size, embedding_size, hidden_units, **kwargs):
         """
@@ -12,7 +12,7 @@ class Seq2SeqEncode(Layer):
         :param embedding_size: Chiều của vector embedding
         :param hidden_units: Chiều của lớp ẩn
         """
-        super(Seq2SeqEncode, self).__init__()
+        super(Seq2SeqEncode, self).__init__(**kwargs)
 
         self.hidden_units = hidden_units
 
@@ -40,7 +40,7 @@ class Seq2SeqEncode(Layer):
         return [tf.zeros([batch_size, self.hidden_units]), tf.zeros([batch_size, self.hidden_units])]
 
 
-class Seq2SeqDecode(Layer):
+class Seq2SeqDecode(tf.keras.models.Model):
     def __init__(self, vocab_size, embedding_size, hidden_units, **kwargs):
         """
             Decoder block in Sequence to Sequence
@@ -110,7 +110,7 @@ class Bahdanau_Attention(Layer):
         return context_vector, score
 
 
-class AttentionSeq2SeqDecode(Layer):
+class AttentionSeq2SeqDecode(tf.keras.models.Model):
     def __init__(self, vocab_size, embedding_size, hidden_units, **kwargs):
         """
             Decoder vs Attention block in Sequence to Sequence
@@ -126,7 +126,7 @@ class AttentionSeq2SeqDecode(Layer):
                                    return_sequences=True,
                                    return_state=True,
                                    recurrent_initializer="he_normal")
-        self.attention = Bahdanau_Attention(hidden_units=hidden_units)
+        self.attention = Bahdanau_Attention(hidden_units=hidden_units * 2)
         self.dense = tf.keras.layers.Dense(vocab_size, activation="linear")
 
     def __call__(self, x, encode_output, state, *args, **kwargs):
@@ -183,8 +183,9 @@ class EncoderDecoder(Layer):
                  tar_vocab_size,
                  embedding_size,
                  hidden_units,
-                 batch_size):
-        super(EncoderDecoder, self).__init__()
+                 batch_size,
+                 **kwargs):
+        super(EncoderDecoder, self).__init__(**kwargs)
 
         self.encoder = Seq2SeqEncode(vocab_size=inp_vocab_size,
                                      embedding_size=embedding_size,
