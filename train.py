@@ -189,7 +189,7 @@ class SequenceToSequence:
         score = 0.0
         test_ds_len = int(len(test_ds) * self.test_split_size)
         count = 0
-        for test_, test_y in test_ds.shuffle(seed=42).take(test_ds_len):
+        for test_, test_y in test_ds.shuffle(seed=1).take(test_ds_len):
             test_x = np.expand_dims(test_.numpy(), axis=0)
             first_state = self.encoder.init_hidden_state(batch_size=1)
             _, last_state = self.encoder(test_x, first_state, training=False)
@@ -223,7 +223,7 @@ class SequenceToSequence:
         score = 0.0
         test_ds_len = int(len(test_ds) * self.test_split_size)
         count = 0
-        for test_, test_y in test_ds.shuffle(seed=42).take(test_ds_len):
+        for test_, test_y in test_ds.shuffle(seed=1).take(test_ds_len):
             test_x = np.expand_dims(test_.numpy(), axis=0)
             first_state = self.encoder.init_hidden_state(batch_size=1)
             encode_outs, last_state = self.encoder(test_x, first_state, training=False)
