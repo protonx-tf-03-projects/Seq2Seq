@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Layer, Embedding, LSTM, Dense
 
 
-class Seq2SeqEncode(tf.keras.models.Model):
+class Seq2SeqEncode(tf.keras.Model):
 
     def __init__(self, vocab_size, embedding_size, hidden_units, **kwargs):
         """
@@ -20,7 +20,7 @@ class Seq2SeqEncode(tf.keras.models.Model):
         self.encode_layer_1 = LSTM(hidden_units,
                                    return_sequences=True,
                                    return_state=True,
-                                   kernel_initializer="he_normal")
+                                   kernel_initializer="glorot_uniform")
 
     def __call__(self, x, first_state, *args, **kwargs):
         """
@@ -40,7 +40,7 @@ class Seq2SeqEncode(tf.keras.models.Model):
         return [tf.zeros([batch_size, self.hidden_units]), tf.zeros([batch_size, self.hidden_units])]
 
 
-class Seq2SeqDecode(tf.keras.models.Model):
+class Seq2SeqDecode(tf.keras.Model):
     def __init__(self, vocab_size, embedding_size, hidden_units, **kwargs):
         """
             Decoder block in Sequence to Sequence
@@ -55,7 +55,7 @@ class Seq2SeqDecode(tf.keras.models.Model):
         self.decode_layer_1 = LSTM(hidden_units,
                                    return_sequences=True,
                                    return_state=True,
-                                   kernel_initializer="he_normal")
+                                   kernel_initializer="glorot_uniform")
         self.dense = Dense(vocab_size, activation="linear", use_bias=False)
 
     def __call__(self, x, state, *args, **kwargs):
@@ -85,8 +85,8 @@ class Bahdanau_Attention(Layer):
 
     def __init__(self, hidden_units, **kwargs):
         super(Bahdanau_Attention, self).__init__(**kwargs)
-        self.weight_output_encoder = Dense(hidden_units)
-        self.weight_state_h = Dense(hidden_units)
+        self.weight_output_encoder = Dense(hidden_units, use_bias=False)
+        self.weight_state_h = Dense(hidden_units, use_bias=False)
         self.score = Dense(1, activation="linear", use_bias=False)
 
     def __call__(self, encode_output, state, *args, **kwargs):
@@ -110,7 +110,7 @@ class Bahdanau_Attention(Layer):
         return context_vector, score
 
 
-class AttentionSeq2SeqDecode(tf.keras.models.Model):
+class AttentionSeq2SeqDecode(tf.keras.Model):
     def __init__(self, vocab_size, embedding_size, hidden_units, **kwargs):
         """
             Decoder vs Attention block in Sequence to Sequence
@@ -125,8 +125,8 @@ class AttentionSeq2SeqDecode(tf.keras.models.Model):
         self.decode_layer_1 = LSTM(hidden_units,
                                    return_sequences=True,
                                    return_state=True,
-                                   recurrent_initializer="he_normal")
-        self.attention = Bahdanau_Attention(hidden_units=hidden_units * 2)
+                                   recurrent_initializer="glorot_uniform")
+        self.attention = Bahdanau_Attention(hidden_units=hidden_units)
         self.dense = Dense(vocab_size, activation="linear", use_bias=False)
 
     def __call__(self, x, encode_output, state, *args, **kwargs):
