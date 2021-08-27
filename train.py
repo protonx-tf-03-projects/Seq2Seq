@@ -90,7 +90,6 @@ class SequenceToSequence:
                  embedding_size=64,
                  hidden_units=256,
                  test_split_size=0.005,
-                 max_length=32,
                  epochs=400,
                  batch_size=128,
                  min_sentence=10,
@@ -102,7 +101,7 @@ class SequenceToSequence:
         self.embedding_size = embedding_size
         self.hidden_units = hidden_units
 
-        self.max_length = max_length
+        self.max_length = max_sentence
         self.test_split_size = test_split_size
         self.min_sentence = min_sentence
         self.max_sentence = max_sentence
