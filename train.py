@@ -112,31 +112,32 @@ class SequenceToSequence:
         self.mode_training = mode_training
         self.debug = debug
 
+        # Load dataset
         self.inp_tensor, self.tar_tensor, self.inp_lang, self.tar_lang = DatasetLoader(self.inp_lang_path,
                                                                                        self.tar_lang_path,
                                                                                        self.min_sentence,
                                                                                        self.max_sentence).build_dataset()
-
+        # Initialize optimizer
         self.optimizer = tf.keras.optimizers.Adam()
-
+        # Initialize encoder
         self.encoder = Seq2SeqEncode(self.inp_lang.vocab_size,
                                      self.embedding_size,
                                      self.hidden_units)
-
+        # Initialize first state
         self.first_state = self.encoder.init_hidden_state(self.BATCH_SIZE)
-
+        # Initialize decoder
         self.decoder = Seq2SeqDecode(self.tar_lang.vocab_size,
                                      self.embedding_size,
                                      self.hidden_units)
-
+        # Initialize decoder with attention
         self.decoder_attention = AttentionSeq2SeqDecode(self.tar_lang.vocab_size,
                                                         self.embedding_size,
                                                         self.hidden_units)
 
-    def training(self, train_ds, test_ds, N_BATCH):
+    def training(self, train_ds, N_BATCH):
         for epoch in range(self.EPOCHS):
             loss = 0
-            for batch_size, (x, y) in tqdm(enumerate(train_ds.take(N_BATCH)), total=N_BATCH):
+            for batch_size, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
                 with tf.GradientTape() as tape:
                     encoder_outs, last_state = self.encoder(x, self.first_state)
                     sos = tf.reshape(tf.constant([self.tar_lang.word2id['<sos>']] * self.BATCH_SIZE), shape=(-1, 1))
@@ -148,15 +149,15 @@ class SequenceToSequence:
                 grads = tape.gradient(loss, train_vars)
                 self.optimizer.apply_gradients(zip(grads, train_vars))
 
-            bleu_score = self.evaluation(test_ds, self.debug)
+            bleu_score = self.evaluation(train_ds, self.debug)
             print("\n=================================================================")
             print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
             print("=================================================================\n")
 
-    def training_with_attention(self, train_ds, test_ds, N_BATCH):
+    def training_with_attention(self, train_ds, N_BATCH):
         for epoch in range(self.EPOCHS):
             total_loss = 0
-            for batch_size, (x, y) in tqdm(enumerate(train_ds.take(N_BATCH)), total=N_BATCH):
+            for batch_size, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
                 loss = 0
                 with tf.GradientTape() as tape:
                     encoder_outs, last_state = self.encoder(x, self.first_state)
@@ -172,7 +173,7 @@ class SequenceToSequence:
                 self.optimizer.apply_gradients(zip(grads, train_vars))
                 total_loss += loss
 
-            bleu_score = self.evaluation_with_attention(test_ds, self.debug)
+            bleu_score = self.evaluation_with_attention(train_ds, self.debug)
             print("\n=================================================================")
             print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {bleu_score}')
             print("=================================================================\n")
@@ -186,9 +187,9 @@ class SequenceToSequence:
         """
         # Preprocessing testing data
         score = 0.0
-        test_ds_len = len(test_ds)
+        test_ds_len = int(len(test_ds) * self.test_split_size)
         count = 0
-        for test_, test_y in test_ds:
+        for test_, test_y in test_ds.shuffle(buffer_size=1).take(test_ds_len):
             test_x = np.expand_dims(test_.numpy(), axis=0)
             first_state = self.encoder.init_hidden_state(batch_size=1)
             _, last_state = self.encoder(test_x, first_state, training=False)
@@ -220,9 +221,9 @@ class SequenceToSequence:
         """
         # Preprocessing testing data
         score = 0.0
-        test_ds_len = len(test_ds)
+        test_ds_len = int(len(test_ds) * self.test_split_size)
         count = 0
-        for test_, test_y in test_ds:
+        for test_, test_y in test_ds.shuffle(buffer_size=1).take(test_ds_len):
             test_x = np.expand_dims(test_.numpy(), axis=0)
             first_state = self.encoder.init_hidden_state(batch_size=1)
             encode_outs, last_state = self.encoder(test_x, first_state, training=False)
@@ -247,30 +248,26 @@ class SequenceToSequence:
         return score / test_ds_len
 
     def run(self):
+        # Padding in sequences
+        train_x = pad_sequences(self.inp_tensor,
+                                maxlen=self.max_length,
+                                padding="post",
+                                truncating="post")
+        train_y = pad_sequences(self.tar_tensor,
+                                maxlen=self.max_length,
+                                padding="post",
+                                truncating="post")
 
-        padded_sequences_vi = pad_sequences(self.inp_tensor,
-                                            maxlen=self.max_length,
-                                            padding="post",
-                                            truncating="post")
-        padded_sequences_en = pad_sequences(self.tar_tensor,
-                                            maxlen=self.max_length,
-                                            padding="post",
-                                            truncating="post")
-
-        train_x, test_x, train_y, test_y = train_test_split(padded_sequences_vi,
-                                                            padded_sequences_en,
-                                                            test_size=self.test_split_size)
-
-        train_ds = tf.data.Dataset.from_tensor_slices((train_x, train_y)).batch(self.BATCH_SIZE)
-        test_ds = tf.data.Dataset.from_tensor_slices((test_x, test_y))
+        # Add to tensor
+        train_ds = tf.data.Dataset.from_tensor_slices((train_x, train_y))
 
         N_BATCH = train_x.shape[0] // self.BATCH_SIZE
 
         # Training
         if self.mode_training.lower() == "attention":
-            self.training_with_attention(train_ds, test_ds, N_BATCH)
+            self.training_with_attention(train_ds, N_BATCH)
         else:
-            self.training(train_ds, test_ds, N_BATCH)
+            self.training(train_ds, N_BATCH)
 
 
 if __name__ == "__main__":
