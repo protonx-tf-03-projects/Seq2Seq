@@ -51,7 +51,7 @@ class Bleu_score:
                         label_subs[" ".join(predicted_sentence[i:i + k])] -= 1
                         num_matches += 1
                 score *= np.power(num_matches / (pred_length - k + 1), np.power(0.5, k))
-        return score
+            return score
 
 
 class MaskedSoftmaxCELoss(tf.keras.losses.Loss):
