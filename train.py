@@ -30,12 +30,8 @@ class Bleu_score:
         return [i for i in sentence.split(" ") if i not in ["<eos>", "<sos>"]]
 
     def __call__(self, predicted_sentence, target_sentences, n_grams=3):
-        predicted_sentence = self.remove_oov(predicted_sentence)
-        target_sentences = self.remove_oov(target_sentences)
         pred_length = len(predicted_sentence)
         target_length = len(target_sentences)
-        if pred_length == 0:
-            return 0
 
         score = np.exp(np.minimum(0, 1 - target_length / pred_length))
         for k in range(1, n_grams + 1):
@@ -161,7 +157,7 @@ class SequenceToSequence:
         """
         :param model: Seq2Seq
         :param test_ds: (inp_vocab, tar_vocab)
-        :param caches: (inp_lang, tar_lang)
+        :param (inp_lang, tar_lang)
         :return:
         """
         # Preprocessing testing data
