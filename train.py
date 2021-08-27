@@ -141,7 +141,7 @@ class SequenceToSequence:
                     encoder_outs, last_state = self.encoder(x, self.first_state)
                     sos = tf.reshape(tf.constant([self.tar_lang.word2id['<sos>']] * self.BATCH_SIZE), shape=(-1, 1))
                     dec_input = tf.concat([sos, y[:, :-1]], 1)  # Teacher forcing
-                    decode_out = self.decoder(dec_input, last_state)
+                    decode_out, _ = self.decoder(dec_input, last_state)
                     loss += MaskedSoftmaxCELoss()(y, decode_out)
 
                 train_vars = self.encoder.trainable_variables + self.decoder.trainable_variables
