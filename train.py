@@ -31,8 +31,13 @@ class Bleu_score:
         return [i for i in sentence.split(" ") if i not in ["<eos>", "<sos>"]]
 
     def __call__(self, predicted_sentence, target_sentences, n_grams=3):
+        predicted_sentence = self.remove_oov(predicted_sentence)
+        target_sentences = self.remove_oov(target_sentences)
         pred_length = len(predicted_sentence)
         target_length = len(target_sentences)
+
+        if pred_length == 0 and pred_length != target_length:
+            return 0
 
         score = np.exp(np.minimum(0, 1 - target_length / pred_length))
         for k in range(1, n_grams + 1):
