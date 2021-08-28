@@ -127,7 +127,7 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
                                  return_state=True,
                                  recurrent_initializer="glorot_uniform")
         self.attention = Bahdanau_Attention(hidden_units=hidden_units)
-        self.dense = Dense(vocab_size, activation="linear", use_bias=False)
+        self.dense = Dense(vocab_size, activation="softmax", use_bias=False)
 
     def __call__(self, x, encode_output, state, *args, **kwargs):
         """
@@ -168,7 +168,7 @@ class LuongSeq2SeqDecoder(tf.keras.Model):
                                  return_sequences=True,
                                  recurrent_initializer="glorot_uniform")
         self.attention = LuongAttention(hidden_units=hidden_units)
-        self.dense = Dense(vocab_size, activation="linear", use_bias=False)
+        self.dense = Dense(vocab_size, activation="softmax", use_bias=False)
 
     def __call__(self, x, encoder_outs, state, *args, **kwargs):
         """
