@@ -188,6 +188,7 @@ class LuongSeq2SeqDecoder(tf.keras.Model):
         x = self.embedding(x)
         lstm_outs, state_h, state_c = self.decode_layer(x, initial_state=state)
         context_vector, att_weights = self.attention(encoder_outs, lstm_outs)
+        context_vector = tf.expand_dims(context_vector, axis=1)
         context_vector = tf.concat([lstm_outs, context_vector], axis=-1)
         context_vector = tf.reshape(context_vector, (-1, context_vector.shape[2]))
         outs = self.dense(context_vector)
@@ -204,4 +205,5 @@ class LuongAttention(Layer):
         score = tf.matmul(decoder_outs, self.Wa(encoder_outs), transpose_b=True)
         alignment = tf.nn.softmax(score, axis=2)
         context_vector = tf.matmul(alignment, encoder_outs)
+        context_vector = tf.reduce_sum(context_vector, axis=1)
         return context_vector, score
