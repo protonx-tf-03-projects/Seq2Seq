@@ -139,7 +139,7 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
                 + state_c: [batch_size, hidden_units] - Cell state in encode layer
 
         :return:
-            - output: [batch_size, embedding_dim, Hidden_unites]
+            - output: [batch_size, vocab_size]
             - state_h: [batch_size, hidden_units] - Current Hidden state
             - state_c: [batch_size, hidden_units] - Current Cell state
         """
@@ -180,7 +180,7 @@ class LuongSeq2SeqDecoder(tf.keras.Model):
                 + state_c: [batch_size, hidden_units] - Cell state in encode layer
 
         :return:
-            - output: [batch_size, 1, Hidden_unites * 2]
+            - output: [batch_size, vocab_size]
             - state_h: [batch_size, hidden_units] - Current Hidden state
             - state_c: [batch_size, hidden_units] - Current Cell state
         """
