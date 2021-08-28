@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Layer, Embedding, LSTM, Dense
+from tensorflow.keras.layers import Layer, Embedding, LSTM, Dense, Dropout
 
 
 class Seq2SeqEncode(tf.keras.Model):
@@ -126,6 +126,7 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
                                  return_sequences=True,
                                  return_state=True,
                                  recurrent_initializer="glorot_uniform")
+        self.dropout = Dropout(0.25)
         self.attention = Bahdanau_Attention(hidden_units=hidden_units)
         self.dense = Dense(vocab_size, use_bias=False)
 
@@ -149,6 +150,7 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
         context_vector = tf.expand_dims(context_vector, axis=1)
         decode_inp = tf.concat([x, context_vector], axis=-1)  # vocab_length
         decode, state_h, state_c = self.decode_layer(decode_inp, state, **kwargs)
+        decode = self.dropout(decode)
         decode = tf.reshape(decode, (-1, decode.shape[2]))
         decode_output = self.dense(decode)
         return decode_output, [state_h, state_c]
@@ -167,6 +169,7 @@ class LuongSeq2SeqDecoder(tf.keras.Model):
                                  return_state=True,
                                  return_sequences=True,
                                  recurrent_initializer="glorot_uniform")
+        self.dropout = Dropout(0.25)
         self.attention = LuongAttention(hidden_units=hidden_units)
         self.dense = Dense(vocab_size, use_bias=False)
 
@@ -187,6 +190,7 @@ class LuongSeq2SeqDecoder(tf.keras.Model):
         x = tf.expand_dims(x, axis=1)
         x = self.embedding(x)
         lstm_outs, state_h, state_c = self.decode_layer(x, initial_state=state)
+        lstm_outs = self.dropout(lstm_outs)
         context_vector, att_weights = self.attention(encoder_outs, lstm_outs)
         context_vector = tf.expand_dims(context_vector, axis=1)
         context_vector = tf.concat([lstm_outs, context_vector], axis=-1)
