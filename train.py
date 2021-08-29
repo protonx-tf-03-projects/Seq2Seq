@@ -35,7 +35,7 @@ class Bleu_score:
         pred_length = len(predicted_sentence)
         target_length = len(target_sentences)
 
-        if pred_length <= n_grams:
+        if pred_length < n_grams:
             return 0
         else:
             score = np.exp(np.minimum(0, 1 - target_length / pred_length))
