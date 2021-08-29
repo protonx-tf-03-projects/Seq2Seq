@@ -18,9 +18,9 @@ class Seq2SeqEncode(tf.keras.Model):
 
         self.embedding = Embedding(vocab_size, embedding_size)
         self.encode_layer = LSTM(hidden_units,
-                                   return_sequences=True,
-                                   return_state=True,
-                                   kernel_initializer="glorot_uniform")
+                                 return_sequences=True,
+                                 return_state=True,
+                                 kernel_initializer="glorot_uniform")
 
     def __call__(self, x, first_state, *args, **kwargs):
         """
@@ -53,9 +53,9 @@ class Seq2SeqDecode(tf.keras.Model):
 
         self.embedding = Embedding(vocab_size, embedding_size)
         self.decode_layer = LSTM(hidden_units,
-                                   return_sequences=True,
-                                   return_state=True,
-                                   kernel_initializer="glorot_uniform")
+                                 return_sequences=True,
+                                 return_state=True,
+                                 kernel_initializer="glorot_uniform")
         self.dense = Dense(vocab_size)
 
     def __call__(self, x, state, *args, **kwargs):
@@ -111,7 +111,7 @@ class Bahdanau_Attention(Layer):
 
 
 class BahdanauSeq2SeqDecode(tf.keras.Model):
-    def __init__(self, vocab_size, embedding_size, hidden_units, **kwargs):
+    def __init__(self, vocab_size, embedding_size, hidden_units, drop_rate, **kwargs):
         """
             Decoder vs Attention block in Sequence to Sequence
 
@@ -126,7 +126,7 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
                                  return_sequences=True,
                                  return_state=True,
                                  recurrent_initializer="glorot_uniform")
-        self.dropout = Dropout(0.25)
+        self.dropout = Dropout(drop_rate)
         self.attention = Bahdanau_Attention(hidden_units=hidden_units)
         self.dense = Dense(vocab_size)
 
@@ -162,14 +162,14 @@ class LuongSeq2SeqDecoder(tf.keras.Model):
 
     """
 
-    def __init__(self, vocab_size, embedding_size, hidden_units, **kwargs):
+    def __init__(self, vocab_size, embedding_size, hidden_units, drop_rate, **kwargs):
         super(LuongSeq2SeqDecoder, self).__init__(**kwargs)
         self.embedding = Embedding(vocab_size, embedding_size)
         self.decode_layer = LSTM(hidden_units,
                                  return_state=True,
                                  return_sequences=True,
                                  recurrent_initializer="glorot_uniform")
-        self.dropout = Dropout(0.25)
+        self.dropout = Dropout(drop_rate)
         self.attention = LuongAttention(hidden_units=hidden_units)
         self.dense = Dense(vocab_size)
 

@@ -93,6 +93,7 @@ class SequenceToSequence:
                  inp_lang_path,
                  tar_lang_path,
                  learning_rate=0.001,
+                 drop_rate=0.5,
                  embedding_size=64,
                  hidden_units=256,
                  test_split_size=0.005,
@@ -107,6 +108,7 @@ class SequenceToSequence:
         self.tar_lang_path = tar_lang_path
         self.embedding_size = embedding_size
         self.hidden_units = hidden_units
+        self.drop_rate = drop_rate
 
         self.max_length = max_sentence
         self.test_split_size = test_split_size
@@ -138,11 +140,13 @@ class SequenceToSequence:
             if self.attention_mode.lower() == "luong":
                 self.decoder_attention = LuongSeq2SeqDecoder(self.tar_lang.vocab_size,
                                                              self.embedding_size,
-                                                             self.hidden_units)
+                                                             self.hidden_units,
+                                                             self.drop_rate)
             else:
                 self.decoder_attention = BahdanauSeq2SeqDecode(self.tar_lang.vocab_size,
                                                                self.embedding_size,
-                                                               self.hidden_units)
+                                                               self.hidden_units,
+                                                               self.drop_rate)
         else:
             # Initialize decoder
             self.decoder = Seq2SeqDecode(self.tar_lang.vocab_size,
@@ -290,6 +294,7 @@ if __name__ == "__main__":
     parser.add_argument("--inp-lang", required=True, type=str)
     parser.add_argument("--tar-lang", required=True, type=str)
     parser.add_argument("--learning-rate", default=0.01, type=float)
+    parser.add_argument("--drop-rate", default=0.5, type=float)
     parser.add_argument("--batch-size", default=128, type=int)
     parser.add_argument("--epochs", default=1000, type=int)
     parser.add_argument("--embedding-size", default=64, type=int)
@@ -320,6 +325,7 @@ if __name__ == "__main__":
     SequenceToSequence(inp_lang_path=args.inp_lang,
                        tar_lang_path=args.tar_lang,
                        learning_rate=args.learning_rate,
+                       drop_rate=args.drop_rate,
                        batch_size=args.batch_size,
                        embedding_size=args.embedding_size,
                        hidden_units=args.hidden_units,
