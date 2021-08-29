@@ -82,7 +82,7 @@ class DatasetLoader:
         self.min_length = min_length
         self.max_length = max_length
 
-        self.punctuation_digits = list(string.punctuation + string.digits)
+        self.punctuation_digits = list(string.punctuation)
 
     def load_dataset(self):
         """
@@ -139,7 +139,7 @@ class DatasetLoader:
         sen = sen.strip()
         sen = re.sub("'", "", sen)
         sen = re.sub("\s+", " ", sen)
-        # sen = " ".join([s for s in sen.split(" ") if s not in self.punctuation_digits])
+        sen = " ".join([s for s in sen.split(" ") if s not in self.punctuation_digits])
         return "<sos> " + sen + " <eos>"
 
     def preprocessing_sentence(self, raw_origin_language, raw_target_language):
