@@ -17,7 +17,7 @@ class Seq2SeqEncode(tf.keras.Model):
         self.hidden_units = hidden_units
 
         self.embedding = Embedding(vocab_size, embedding_size)
-        self.encode_layer_1 = LSTM(hidden_units,
+        self.encode_layer = LSTM(hidden_units,
                                    return_sequences=True,
                                    return_state=True,
                                    kernel_initializer="glorot_uniform")
@@ -33,7 +33,7 @@ class Seq2SeqEncode(tf.keras.Model):
             - state_c: [batch_size, hidden_units] - Current Cell state
         """
         encode = self.embedding(x)
-        encode, state_h, state_c = self.encode_layer_1(encode, first_state, **kwargs)
+        encode, state_h, state_c = self.encode_layer(encode, first_state, **kwargs)
         return encode, [state_h, state_c]
 
     def init_hidden_state(self, batch_size):
@@ -52,11 +52,11 @@ class Seq2SeqDecode(tf.keras.Model):
         super(Seq2SeqDecode, self).__init__(**kwargs)
 
         self.embedding = Embedding(vocab_size, embedding_size)
-        self.decode_layer_1 = LSTM(hidden_units,
+        self.decode_layer = LSTM(hidden_units,
                                    return_sequences=True,
                                    return_state=True,
                                    kernel_initializer="glorot_uniform")
-        self.dense = Dense(vocab_size, activation="linear", use_bias=False)
+        self.dense = Dense(vocab_size)
 
     def __call__(self, x, state, *args, **kwargs):
         """
@@ -73,7 +73,7 @@ class Seq2SeqDecode(tf.keras.Model):
         """
 
         decode = self.embedding(x)  # [Batch_size, vocab_length, Embedding_size]
-        decode, state_h, state_c = self.decode_layer_1(decode, state, **kwargs)
+        decode, state_h, state_c = self.decode_layer(decode, state, **kwargs)
         output_decode = self.dense(decode)
         return output_decode, [state_h, state_c]
 
@@ -85,9 +85,9 @@ class Bahdanau_Attention(Layer):
 
     def __init__(self, hidden_units, **kwargs):
         super(Bahdanau_Attention, self).__init__(**kwargs)
-        self.weight_output_encoder = Dense(hidden_units, use_bias=False)
-        self.weight_state_h = Dense(hidden_units, use_bias=False)
-        self.score = Dense(1, use_bias=False)
+        self.weight_output_encoder = Dense(hidden_units)
+        self.weight_state_h = Dense(hidden_units)
+        self.score = Dense(1)
 
     def __call__(self, encode_output, state, *args, **kwargs):
         """
@@ -128,7 +128,7 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
                                  recurrent_initializer="glorot_uniform")
         self.dropout = Dropout(0.25)
         self.attention = Bahdanau_Attention(hidden_units=hidden_units)
-        self.dense = Dense(vocab_size, use_bias=False)
+        self.dense = Dense(vocab_size)
 
     def __call__(self, x, encode_output, state, *args, **kwargs):
         """
@@ -171,7 +171,7 @@ class LuongSeq2SeqDecoder(tf.keras.Model):
                                  recurrent_initializer="glorot_uniform")
         self.dropout = Dropout(0.25)
         self.attention = LuongAttention(hidden_units=hidden_units)
-        self.dense = Dense(vocab_size, use_bias=False)
+        self.dense = Dense(vocab_size)
 
     def __call__(self, x, encoder_outs, state, *args, **kwargs):
         """
@@ -203,7 +203,7 @@ class LuongAttention(Layer):
 
     def __init__(self, hidden_units, **kwargs):
         super(LuongAttention, self).__init__(**kwargs)
-        self.Wa = Dense(hidden_units, use_bias=False)
+        self.Wa = Dense(hidden_units)
 
     def __call__(self, encoder_outs, decoder_outs, *args, **kwargs):
         score = tf.matmul(decoder_outs, self.Wa(encoder_outs), transpose_b=True)
