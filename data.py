@@ -139,9 +139,11 @@ class DatasetLoader:
         sen = sen.strip()
         sen = re.sub("'", "", sen)
         sen = re.sub("\s+", " ", sen)
+        sen = " ".join([s for s in sen.split(" ") if s not in self.punctuation])
         if not tar_get:
-            sen = " ".join([s for s in sen.split(" ") if s not in self.punctuation])
-        return "<sos> " + sen + " <eos>"
+            return "<sos> " + sen + " <eos>"
+        else:
+            return sen + " <eos>"
 
     def preprocessing_sentence(self, raw_origin_language, raw_target_language):
         """
