@@ -148,7 +148,7 @@ class SequenceToSequence:
 
             input_decode = tf.reshape(tf.constant([self.tar_lang.word2id['<sos>']]), shape=(-1, 1))
             sentence = []
-            for _ in range(self.tar_lang.max_len):
+            for _ in range(len(test_y)):
                 output, last_state = self.decoder(input_decode, last_state, training=False)
                 output = tf.argmax(output, axis=2).numpy()
                 input_decode = output
@@ -181,7 +181,7 @@ class SequenceToSequence:
 
             input_decode = np.array([self.tar_lang.word2id['<sos>']])
             sentence = []
-            for _ in range(self.tar_lang.max_len):
+            for _ in range(len(test_y)):
                 output, last_state = self.decoder_attention(input_decode, encode_outs, last_state, training=False)
                 output = tf.argmax(output, axis=1).numpy()
                 input_decode = output
