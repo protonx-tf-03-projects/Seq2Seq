@@ -150,7 +150,7 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
         self.attention = Bahdanau_Attention(hidden_units=hidden_units)
         self.dense = Dense(vocab_size)
 
-    def __call__(self, x, encode_output, state, *args, **kwargs):
+    def __call__(self, x, encoder_outs, state, *args, **kwargs):
         """
         :input:
             - x: [batch_size, max_length]
@@ -166,7 +166,7 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
         """
         x = tf.expand_dims(x, axis=1)
         x = self.embedding(x)  # [Batch_size, vocab_length, Embedding_size]
-        context_vector, attention_weight = self.attention(encode_output, state)
+        context_vector, attention_weight = self.attention(encoder_outs, state)
         context_vector = tf.expand_dims(context_vector, axis=1)
         decode_inp = tf.concat([x, context_vector], axis=-1)  # vocab_length
         decode, state_h, state_c = self.decode_layer(decode_inp, state, **kwargs)
