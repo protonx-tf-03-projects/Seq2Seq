@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Layer, Embedding, GRU, Dense, Dropout, GRU
+from tensorflow.keras.layers import Layer, Embedding, Dense, GRU
 
 
 class Seq2SeqEncode(tf.keras.Model):
@@ -111,7 +111,7 @@ class Bahdanau_Attention(Layer):
 
 
 class BahdanauSeq2SeqDecode(tf.keras.Model):
-    def __init__(self, vocab_size, embedding_size, hidden_units, drop_rate, **kwargs):
+    def __init__(self, vocab_size, embedding_size, hidden_units, **kwargs):
         """
             Decoder vs Attention block in Sequence to Sequence
 
@@ -126,7 +126,6 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
                                 return_sequences=True,
                                 return_state=True,
                                 recurrent_initializer="glorot_uniform")
-        self.dropout = Dropout(drop_rate)
         self.attention = Bahdanau_Attention(hidden_units=hidden_units)
         self.dense = Dense(vocab_size)
 
@@ -150,7 +149,6 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
         context_vector = tf.expand_dims(context_vector, axis=1)
         decode_inp = tf.concat([x, context_vector], axis=-1)  # vocab_length
         decode, state_h = self.decode_layer(decode_inp, state, **kwargs)
-        decode = self.dropout(decode)
         decode = tf.reshape(decode, (-1, decode.shape[2]))
         decode_output = self.dense(decode)
         return decode_output, state_h
@@ -162,14 +160,13 @@ class LuongSeq2SeqDecoder(tf.keras.Model):
 
     """
 
-    def __init__(self, vocab_size, embedding_size, hidden_units, drop_rate, **kwargs):
+    def __init__(self, vocab_size, embedding_size, hidden_units, **kwargs):
         super(LuongSeq2SeqDecoder, self).__init__(**kwargs)
         self.embedding = Embedding(vocab_size, embedding_size)
         self.decode_layer = GRU(hidden_units,
                                 return_state=True,
                                 return_sequences=True,
                                 recurrent_initializer="glorot_uniform")
-        self.dropout = Dropout(drop_rate)
         self.attention = LuongAttention(hidden_units=hidden_units)
         self.dense = Dense(vocab_size)
 
@@ -190,7 +187,6 @@ class LuongSeq2SeqDecoder(tf.keras.Model):
         x = tf.expand_dims(x, axis=1)
         x = self.embedding(x)
         gru_outs, state_h = self.decode_layer(x, initial_state=state)
-        gru_outs = self.dropout(gru_outs)
         context_vector, att_weights = self.attention(encoder_outs, gru_outs)
         context_vector = tf.expand_dims(context_vector, axis=1)
         context_vector = tf.concat([gru_outs, context_vector], axis=-1)
