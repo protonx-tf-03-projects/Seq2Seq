@@ -56,6 +56,9 @@ class SequenceToSequence:
         # Initialize loss function
         self.loss = MaskedSoftmaxCELoss()
 
+        # Initialize Bleu function
+        self.bleu = Bleu_score()
+
         # Initialize encoder
         self.encoder = Seq2SeqEncode(self.inp_lang.vocab_size,
                                      self.embedding_size,
@@ -150,8 +153,8 @@ class SequenceToSequence:
                 output = tf.argmax(output, axis=2).numpy()
                 input_decode = output
                 sentence.append(output[0][0])
-            score += Bleu_score()(self.tar_lang.vector_to_sentence(sentence),
-                                  self.tar_lang.vector_to_sentence(test_y.numpy()))
+            score += self.bleu(self.tar_lang.vector_to_sentence(sentence),
+                               self.tar_lang.vector_to_sentence(test_y.numpy()))
             if debug and count <= 5:
                 print("-----------------------------------------------------------------")
                 print("Input    : ", self.inp_lang.vector_to_sentence(test_.numpy()))
@@ -184,8 +187,8 @@ class SequenceToSequence:
                 input_decode = output
                 sentence.append(output[0])
 
-            score += Bleu_score()(self.tar_lang.vector_to_sentence(sentence),
-                                  self.tar_lang.vector_to_sentence(test_y.numpy()))
+            score += self.bleu(self.tar_lang.vector_to_sentence(sentence),
+                               self.tar_lang.vector_to_sentence(test_y.numpy()))
             if debug and count <= 5:
                 print("-----------------------------------------------------------------")
                 print("Input    : ", self.inp_lang.vector_to_sentence(test_.numpy()))
