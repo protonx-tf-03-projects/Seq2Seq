@@ -1,6 +1,6 @@
 import numpy as np
 from data import DatasetLoader
-from model.tests.model import Seq2SeqEncode, Seq2SeqDecode, LuongSeq2SeqDecoder
+from model.tests.model import Seq2SeqEncode, Seq2SeqDecode, LuongSeq2SeqDecoder, BahdanauSeq2SeqDecode
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     print("State_hidden: ", last_state[0].shape)
     print("State_cell: ", last_state[1].shape)
 
-    decoder = LuongSeq2SeqDecoder(vocab_size, embedding_size, hidden_unit)
+    decoder = BahdanauSeq2SeqDecode(vocab_size, embedding_size, hidden_unit)
     decode_output, state = decoder(tmp_x[:, 0], encoder_outs=encode_output, state=last_state, training=False)
     print("================== Decoder ==================")
     print("Output decode: ", decode_output.shape)
