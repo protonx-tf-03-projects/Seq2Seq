@@ -52,6 +52,10 @@ class SequenceToSequence:
                                                                                        self.max_sentence).build_dataset()
         # Initialize optimizer
         self.optimizer = tf.keras.optimizers.Adam(learning_rate)
+
+        # Initialize loss function
+        self.loss = MaskedSoftmaxCELoss()
+
         # Initialize encoder
         self.encoder = Seq2SeqEncode(self.inp_lang.vocab_size,
                                      self.embedding_size,
@@ -84,7 +88,7 @@ class SequenceToSequence:
                     sos = tf.reshape(tf.constant([self.tar_lang.word2id['<sos>']] * self.BATCH_SIZE), shape=(-1, 1))
                     dec_input = tf.concat([sos, y[:, :-1]], 1)  # Teacher forcing
                     decode_out, _ = self.decoder(dec_input, last_state)
-                    loss += MaskedSoftmaxCELoss()(y, decode_out)
+                    loss += self.loss(y, decode_out)
 
                 train_vars = self.encoder.trainable_variables + self.decoder.trainable_variables
                 grads = tape.gradient(loss, train_vars)
@@ -108,7 +112,7 @@ class SequenceToSequence:
                     dec_input = tf.constant([self.tar_lang.word2id['<sos>']] * self.BATCH_SIZE)
                     for i in range(1, y.shape[1]):
                         decode_out, _ = self.decoder_attention(dec_input, encoder_outs, last_state)
-                        loss += MaskedSoftmaxCELoss()(y[:, i], decode_out)
+                        loss += self.loss(y[:, i], decode_out)
                         dec_input = y[:, i]
 
                 train_vars = self.encoder.trainable_variables + self.decoder_attention.trainable_variables
