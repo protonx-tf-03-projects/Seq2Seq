@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Layer, Embedding, Dense, GRU
+from tensorflow.keras.layers import Layer, Embedding, Dense, LSTM
 
 
 class Seq2SeqEncode(tf.keras.Model):
@@ -17,10 +17,17 @@ class Seq2SeqEncode(tf.keras.Model):
         self.hidden_units = hidden_units
 
         self.embedding = Embedding(vocab_size, embedding_size)
-        self.encode_layer = GRU(hidden_units,
-                                return_sequences=True,
-                                return_state=True,
-                                kernel_initializer="glorot_uniform")
+        self.encode_layer_1 = LSTM(hidden_units,
+                                   recurrent_dropout=0.2,
+                                   return_sequences=True,
+                                   return_state=True,
+                                   kernel_initializer="glorot_uniform")
+
+        self.encode_layer_2 = LSTM(hidden_units,
+                                   recurrent_dropout=0.2,
+                                   return_sequences=True,
+                                   return_state=True,
+                                   kernel_initializer="glorot_uniform")
 
     def __call__(self, x, first_state, *args, **kwargs):
         """
@@ -33,11 +40,12 @@ class Seq2SeqEncode(tf.keras.Model):
             - state_c: [batch_size, hidden_units] - Current Cell state
         """
         encode = self.embedding(x)
-        encode, state_h = self.encode_layer(encode, first_state, **kwargs)
-        return encode, state_h
+        encode, state_h, state_c = self.encode_layer_1(encode, first_state, **kwargs)
+        encode, state_h, state_c = self.encode_layer_2(encode, **kwargs)
+        return encode, [state_h, state_c]
 
     def init_hidden_state(self, batch_size):
-        return [tf.zeros([batch_size, self.hidden_units])]
+        return [tf.zeros([batch_size, self.hidden_units]), tf.zeros([batch_size, self.hidden_units])]
 
 
 class Seq2SeqDecode(tf.keras.Model):
@@ -52,10 +60,16 @@ class Seq2SeqDecode(tf.keras.Model):
         super(Seq2SeqDecode, self).__init__(**kwargs)
 
         self.embedding = Embedding(vocab_size, embedding_size)
-        self.decode_layer = GRU(hidden_units,
-                                return_sequences=True,
-                                return_state=True,
-                                kernel_initializer="glorot_uniform")
+        self.decode_layer_1 = LSTM(hidden_units,
+                                   recurrent_dropout=0.2,
+                                   return_sequences=True,
+                                   return_state=True,
+                                   kernel_initializer="glorot_uniform")
+        self.decode_layer_2 = LSTM(hidden_units,
+                                   recurrent_dropout=0.2,
+                                   return_sequences=True,
+                                   return_state=True,
+                                   kernel_initializer="glorot_uniform")
         self.dense = Dense(vocab_size)
 
     def __call__(self, x, state, *args, **kwargs):
@@ -73,9 +87,10 @@ class Seq2SeqDecode(tf.keras.Model):
         """
 
         decode = self.embedding(x)  # [Batch_size, vocab_length, Embedding_size]
-        decode, state_h = self.decode_layer(decode, state, **kwargs)
+        decode, state_h, state_c = self.decode_layer_1(decode, state, **kwargs)
+        decode, state_h, state_c = self.decode_layer_2(decode, **kwargs)
         output_decode = self.dense(decode)
-        return output_decode, state_h
+        return output_decode, [state_h, state_c]
 
 
 class Bahdanau_Attention(Layer):
@@ -122,10 +137,16 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
         super(BahdanauSeq2SeqDecode, self).__init__(**kwargs)
 
         self.embedding = Embedding(vocab_size, embedding_size)
-        self.decode_layer = GRU(hidden_units,
-                                return_sequences=True,
-                                return_state=True,
-                                recurrent_initializer="glorot_uniform")
+        self.decode_layer_1 = LSTM(hidden_units,
+                                   recurrent_dropout=0.2,
+                                   return_sequences=True,
+                                   return_state=True,
+                                   kernel_initializer="glorot_uniform")
+        self.decode_layer_2 = LSTM(hidden_units,
+                                   recurrent_dropout=0.2,
+                                   return_sequences=True,
+                                   return_state=True,
+                                   kernel_initializer="glorot_uniform")
         self.attention = Bahdanau_Attention(hidden_units=hidden_units)
         self.dense = Dense(vocab_size)
 
@@ -148,10 +169,11 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
         context_vector, attention_weight = self.attention(encode_output, state)
         context_vector = tf.expand_dims(context_vector, axis=1)
         decode_inp = tf.concat([x, context_vector], axis=-1)  # vocab_length
-        decode, state_h = self.decode_layer(decode_inp, state, **kwargs)
+        decode, state_h, state_c = self.decode_layer(decode_inp, state, **kwargs)
+        decode, state_h, state_c = self.decode_layer(decode, **kwargs)
         decode = tf.reshape(decode, (-1, decode.shape[2]))
         decode_output = self.dense(decode)
-        return decode_output, state_h
+        return decode_output, [state_h, state_c]
 
 
 class LuongSeq2SeqDecoder(tf.keras.Model):
@@ -163,10 +185,16 @@ class LuongSeq2SeqDecoder(tf.keras.Model):
     def __init__(self, vocab_size, embedding_size, hidden_units, **kwargs):
         super(LuongSeq2SeqDecoder, self).__init__(**kwargs)
         self.embedding = Embedding(vocab_size, embedding_size)
-        self.decode_layer = GRU(hidden_units,
-                                return_state=True,
-                                return_sequences=True,
-                                recurrent_initializer="glorot_uniform")
+        self.decode_layer_1 = LSTM(hidden_units,
+                                   recurrent_dropout=0.2,
+                                   return_sequences=True,
+                                   return_state=True,
+                                   kernel_initializer="glorot_uniform")
+        self.decode_layer_2 = LSTM(hidden_units,
+                                   recurrent_dropout=0.2,
+                                   return_sequences=True,
+                                   return_state=True,
+                                   kernel_initializer="glorot_uniform")
         self.attention = LuongAttention(hidden_units=hidden_units)
         self.dense = Dense(vocab_size)
 
@@ -186,12 +214,13 @@ class LuongSeq2SeqDecoder(tf.keras.Model):
         """
         x = tf.expand_dims(x, axis=1)
         x = self.embedding(x)
-        gru_outs, state_h = self.decode_layer(x, initial_state=state)
-        context_vector, att_weights = self.attention(encoder_outs, gru_outs)
-        concat = tf.concat([gru_outs, context_vector], axis=-1)
+        decode_outs, state_h, state_c = self.decode_layer_1(x, initial_state=state)
+        decode_outs, state_h, state_c = self.decode_layer_2(decode_outs)
+        context_vector, att_weights = self.attention(encoder_outs, decode_outs)
+        concat = tf.concat([decode_outs, context_vector], axis=-1)
         concat = tf.reshape(concat, (-1, concat.shape[2]))
         outs = self.dense(concat)
-        return outs, state_h
+        return outs, [state_h, state_c]
 
 
 class LuongAttention(Layer):
