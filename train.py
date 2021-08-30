@@ -99,7 +99,7 @@ class SequenceToSequence:
 
             bleu_score = self.evaluation(train_ds, self.debug)
             print("\n=================================================================")
-            print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {round(bleu_score, 2) * 100}')
+            print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
             print("=================================================================\n")
 
         # self.encoder.save_weights(self.save_encoder)
@@ -125,7 +125,7 @@ class SequenceToSequence:
 
             bleu_score = self.evaluation_with_attention(train_ds, self.debug)
             print("\n=================================================================")
-            print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {round(bleu_score, 2) * 100}')
+            print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {bleu_score}')
             print("=================================================================\n")
 
         # self.encoder.save_weights(self.save_encoder)
