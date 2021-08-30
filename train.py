@@ -8,9 +8,8 @@ import tensorflow as tf
 from tqdm import tqdm
 from data import DatasetLoader
 from argparse import ArgumentParser
-from sklearn.model_selection import train_test_split
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from model.tests.model_test import Seq2SeqEncode, Seq2SeqDecode, BahdanauSeq2SeqDecode, LuongSeq2SeqDecoder
+from model.tests.model import Seq2SeqEncode, Seq2SeqDecode, BahdanauSeq2SeqDecode, LuongSeq2SeqDecoder
 
 
 class Bleu_score:
@@ -103,6 +102,8 @@ class SequenceToSequence:
                  max_sentence=14,
                  train_mode="attention",
                  attention_mode="luong",  # Bahdanau
+                 save_encoder="save/weights/encoder.h5",
+                 save_decoder="save/weights/decoder.h5",
                  debug=False):
         self.inp_lang_path = inp_lang_path
         self.tar_lang_path = tar_lang_path
@@ -119,6 +120,8 @@ class SequenceToSequence:
         self.EPOCHS = epochs
         self.mode_training = train_mode
         self.attention_mode = attention_mode
+        self.save_encoder = save_encoder
+        self.save_decoder = save_decoder
         self.debug = debug
 
         # Load dataset
@@ -173,6 +176,9 @@ class SequenceToSequence:
             print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
             print("=================================================================\n")
 
+        # self.encoder.save_weights(self.save_encoder)
+        # self.decoder.save_weights(self.save_decoder)
+
     def training_with_attention(self, train_ds, N_BATCH):
         for epoch in range(self.EPOCHS):
             total_loss = 0
@@ -195,6 +201,9 @@ class SequenceToSequence:
             print("\n=================================================================")
             print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {bleu_score}')
             print("=================================================================\n")
+
+        # self.encoder.save_weights(self.save_encoder)
+        # self.decoder_attention.save_weights(self.save_decoder)
 
     def evaluation(self, test_ds, debug=False):
         """
