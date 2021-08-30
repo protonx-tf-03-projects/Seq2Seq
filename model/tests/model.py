@@ -169,8 +169,8 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
         context_vector, attention_weight = self.attention(encoder_outs, state)
         context_vector = tf.expand_dims(context_vector, axis=1)
         decode_inp = tf.concat([x, context_vector], axis=-1)  # vocab_length
-        decode, state_h, state_c = self.decode_layer(decode_inp, state, **kwargs)
-        decode, state_h, state_c = self.decode_layer(decode, **kwargs)
+        decode, state_h, state_c = self.decode_layer_1(decode_inp, state, **kwargs)
+        decode, state_h, state_c = self.decode_layer_2(decode, **kwargs)
         decode = tf.reshape(decode, (-1, decode.shape[2]))
         decode_output = self.dense(decode)
         return decode_output, [state_h, state_c]
