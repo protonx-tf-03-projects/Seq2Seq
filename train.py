@@ -169,7 +169,7 @@ class SequenceToSequence:
 
             bleu_score = self.evaluation(train_ds, self.debug)
             print("\n=================================================================")
-            print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
+            print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {round(bleu_score, 2) * 100}')
             print("=================================================================\n")
 
         # self.encoder.save_weights(self.save_encoder)
@@ -195,7 +195,7 @@ class SequenceToSequence:
 
             bleu_score = self.evaluation_with_attention(train_ds, self.debug)
             print("\n=================================================================")
-            print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {bleu_score}')
+            print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {round(bleu_score, 2) * 100}')
             print("=================================================================\n")
 
         # self.encoder.save_weights(self.save_encoder)
@@ -249,7 +249,7 @@ class SequenceToSequence:
             first_state = self.encoder.init_hidden_state(batch_size=1)
             encode_outs, last_state = self.encoder(test_x, first_state, training=False)
 
-            input_decode = np.array([self.tar_lang.word2id['<eos>']])
+            input_decode = np.array([self.tar_lang.word2id['<sos>']])
             sentence = []
             for _ in range(self.tar_lang.max_len):
                 output, last_state = self.decoder_attention(input_decode, encode_outs, last_state, training=False)
