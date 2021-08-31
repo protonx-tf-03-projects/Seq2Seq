@@ -14,7 +14,6 @@ class SequenceToSequence:
     def __init__(self,
                  inp_lang_path,
                  tar_lang_path,
-                 learning_rate=0.001,
                  embedding_size=64,
                  hidden_units=256,
                  test_split_size=0.005,
@@ -24,7 +23,6 @@ class SequenceToSequence:
                  max_sentence=14,
                  train_mode="attention",
                  attention_mode="luong",  # Bahdanau
-                 save_model="./save/weights/",
                  debug=False):
         self.inp_lang_path = inp_lang_path
         self.tar_lang_path = tar_lang_path
@@ -41,7 +39,7 @@ class SequenceToSequence:
         self.mode_training = train_mode
         self.attention_mode = attention_mode
 
-        path_save = os.getcwd() + "/" + save_model
+        path_save = os.getcwd() + "/saved_models/"
         if not os.path.exists(path_save):
             os.mkdir(path_save)
 
@@ -237,7 +235,6 @@ if __name__ == "__main__":
     # Arguments users used when running command lines
     parser.add_argument("--inp-lang", required=True, type=str)
     parser.add_argument("--tar-lang", required=True, type=str)
-    parser.add_argument("--learning-rate", default=0.01, type=float)
     parser.add_argument("--batch-size", default=128, type=int)
     parser.add_argument("--epochs", default=1000, type=int)
     parser.add_argument("--embedding-size", default=64, type=int)
@@ -247,7 +244,6 @@ if __name__ == "__main__":
     parser.add_argument("--test-split-size", default=0.01, type=float)
     parser.add_argument("--train-mode", default="not_attention", type=str)
     parser.add_argument("--attention-mode", default="luong", type=str)
-    parser.add_argument("--save-model", default="", type=str)
     parser.add_argument("--debug", default=False, type=bool)
 
     home_dir = os.getcwd()
@@ -268,7 +264,6 @@ if __name__ == "__main__":
     # Do Training
     SequenceToSequence(inp_lang_path=args.inp_lang,
                        tar_lang_path=args.tar_lang,
-                       learning_rate=args.learning_rate,
                        batch_size=args.batch_size,
                        embedding_size=args.embedding_size,
                        hidden_units=args.hidden_units,
@@ -278,7 +273,6 @@ if __name__ == "__main__":
                        max_sentence=args.max_sentence,
                        train_mode=args.train_mode,
                        attention_mode=args.attention_mode,
-                       save_model=args.save_model,
                        debug=args.debug).run()
 
     # python train.py --inp-lang="dataset/train.en.txt" --tar-lang="dataset/train.vi.txt" --hidden-units=256 --embedding-size=128 --epochs=200 --test-split-size=0.01 --train-mode="attention" --save-mode="./save" --debug=True
