@@ -192,11 +192,11 @@ class LuongSeq2SeqDecoder(tf.keras.Model):
         """
         x = tf.expand_dims(x, axis=1)
         x = self.embedding(x)
-        context_vector, att_weights = self.attention(encoder_outs, x)
-        concat = tf.concat([x, context_vector], axis=-1)
-        decode_outs, state_h, state_c = self.decode_layer_1(concat, initial_state=state)
-        decode_outs = tf.reshape(decode_outs, (-1, decode_outs.shape[2]))
-        outs = self.dense(decode_outs)
+        decode_outs, state_h, state_c = self.decode_layer_1(x, state)
+        context_vector, att_weights = self.attention(encoder_outs, decode_outs)
+        concat = tf.concat([decode_outs, context_vector], axis=-1)
+        concat = tf.reshape(concat, (-1, concat.shape[2]))
+        outs = self.dense(concat)
         return outs, [state_h, state_c]
 
 
