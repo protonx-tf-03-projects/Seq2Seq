@@ -96,7 +96,7 @@ class Seq2Seq:
             print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
             if bleu_score > tmp:
                 self.model.save_weights(self.save_model)
-                print("[INFO] Saved model in {} direction!".format(self.save_model))
+                print("[INFO] Saved model in '{}' direction!".format(self.save_model))
                 tmp = bleu_score
             print("=================================================================\n")
 
@@ -129,7 +129,7 @@ class Seq2Seq:
             print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {bleu_score}')
             if bleu_score > tmp:
                 self.model.save_weights(self.save_model)
-                print("[INFO] Saved model in {} direction!".format(self.save_model))
+                print("[INFO] Saved model in '{}' direction!".format(self.save_model))
                 tmp = bleu_score
             print("=================================================================\n")
 
