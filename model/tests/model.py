@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Layer, Embedding, Dense, LSTM
 
 
-class Seq2SeqEncode(tf.keras.Model):
+class Encode(tf.keras.Model):
 
     def __init__(self, vocab_size, embedding_size, hidden_units, **kwargs):
         """
@@ -12,7 +12,7 @@ class Seq2SeqEncode(tf.keras.Model):
         :param embedding_size: Chiều của vector embedding
         :param hidden_units: Chiều của lớp ẩn
         """
-        super(Seq2SeqEncode, self).__init__(**kwargs)
+        super(Encode, self).__init__(**kwargs)
 
         self.hidden_units = hidden_units
 
@@ -41,7 +41,7 @@ class Seq2SeqEncode(tf.keras.Model):
         return [tf.zeros([batch_size, self.hidden_units]), tf.zeros([batch_size, self.hidden_units])]
 
 
-class Seq2SeqDecode(tf.keras.Model):
+class Decode(tf.keras.Model):
     def __init__(self, vocab_size, embedding_size, hidden_units, **kwargs):
         """
             Decoder block in Sequence to Sequence
@@ -50,7 +50,7 @@ class Seq2SeqDecode(tf.keras.Model):
         :param embedding_size: Chiều của vector embedding
         :param hidden_units: Chiều của lớp ẩn
         """
-        super(Seq2SeqDecode, self).__init__(**kwargs)
+        super(Decode, self).__init__(**kwargs)
 
         self.embedding = Embedding(vocab_size, embedding_size)
         self.decode_layer_1 = LSTM(hidden_units,
@@ -81,13 +81,13 @@ class Seq2SeqDecode(tf.keras.Model):
         return output_decode, [state_h, state_c]
 
 
-class Bahdanau_Attention(Layer):
+class BahdanauAttention(Layer):
     """
         Bahdanua attention paper: https://arxiv.org/pdf/1409.0473.pdf
     """
 
     def __init__(self, hidden_units, **kwargs):
-        super(Bahdanau_Attention, self).__init__(**kwargs)
+        super(BahdanauAttention, self).__init__(**kwargs)
         self.weight_output_encoder = Dense(hidden_units)
         self.weight_state_h = Dense(hidden_units)
         self.score = Dense(1)
@@ -113,7 +113,7 @@ class Bahdanau_Attention(Layer):
         return context_vector, score
 
 
-class BahdanauSeq2SeqDecode(tf.keras.Model):
+class BahdanauDecode(tf.keras.Model):
     def __init__(self, vocab_size, embedding_size, hidden_units, **kwargs):
         """
             Decoder vs Attention block in Sequence to Sequence
@@ -122,7 +122,7 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
         :param embedding_size: Chiều của vector embedding
         :param hidden_units: Chiều của lớp ẩn
         """
-        super(BahdanauSeq2SeqDecode, self).__init__(**kwargs)
+        super(BahdanauDecode, self).__init__(**kwargs)
 
         self.embedding = Embedding(vocab_size, embedding_size)
         self.decode_layer_1 = LSTM(hidden_units,
@@ -131,7 +131,7 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
                                    return_sequences=True,
                                    return_state=True,
                                    kernel_initializer="glorot_uniform")
-        self.attention = Bahdanau_Attention(hidden_units=hidden_units)
+        self.attention = BahdanauAttention(hidden_units=hidden_units)
         self.dense = Dense(vocab_size)
 
     def __call__(self, x, encoder_outs, state, *args, **kwargs):
@@ -159,14 +159,14 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
         return decode_output, [state_h, state_c]
 
 
-class LuongSeq2SeqDecoder(tf.keras.Model):
+class LuongDecoder(tf.keras.Model):
     """
         Luong Attention layer in Seq2Seq: https://arxiv.org/pdf/1508.04025.pdf
 
     """
 
     def __init__(self, vocab_size, embedding_size, hidden_units, **kwargs):
-        super(LuongSeq2SeqDecoder, self).__init__(**kwargs)
+        super(LuongDecoder, self).__init__(**kwargs)
         self.embedding = Embedding(vocab_size, embedding_size)
         self.decode_layer_1 = LSTM(hidden_units,
                                    recurrent_dropout=0.2,
@@ -212,3 +212,44 @@ class LuongAttention(Layer):
         alignment = tf.nn.softmax(score, axis=2)
         context_vector = tf.matmul(alignment, encoder_outs)
         return context_vector, score
+
+
+class SequenceToSequence(tf.keras.Model):
+    def __init__(self,
+                 inp_vocab_size,
+                 tar_vocab_size,
+                 embedding_size,
+                 hidden_units,
+                 train_mode,
+                 attention_mode="luong"):
+        super(SequenceToSequence, self).__init__()
+        self.train_mode = train_mode
+
+        # Initialize encoder
+        self.encoder = Encode(inp_vocab_size,
+                              embedding_size,
+                              hidden_units)
+
+        # Initialize decoder with attention
+        if self.train_mode.lower() == "attention":
+            if attention_mode.lower() == "luong":
+                self.decoder = LuongDecoder(tar_vocab_size,
+                                            embedding_size,
+                                            hidden_units)
+            else:
+                self.decoder = BahdanauDecode(tar_vocab_size,
+                                              embedding_size,
+                                              hidden_units)
+        else:
+            # Initialize decoder
+            self.decoder = Decode(tar_vocab_size,
+                                  embedding_size,
+                                  hidden_units)
+
+    def call(self, encode_inps, decode_inps, training=None):
+        encode_outs, last_state = self.encoder(encode_inps)
+        if self.train_mode.lower() == "attention":
+            decode_outs, _ = self.decoder(decode_inps, encode_outs, last_state)
+        else:
+            decode_outs, _ = self.decoder(decode_inps, last_state)
+        return decode_outs
