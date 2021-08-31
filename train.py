@@ -21,6 +21,7 @@ class SequenceToSequence:
                  batch_size=128,
                  min_sentence=10,
                  max_sentence=14,
+                 warmup_steps=80,
                  train_mode="attention",
                  attention_mode="luong",  # Bahdanau
                  debug=False):
@@ -53,7 +54,7 @@ class SequenceToSequence:
                                                                                        self.min_sentence,
                                                                                        self.max_sentence).build_dataset()
         # Initialize optimizer
-        learning_rate = CustomSchedule(self.hidden_units, warmup_steps=80)
+        learning_rate = CustomSchedule(self.hidden_units, warmup_steps=warmup_steps)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
 
         # Initialize loss function
@@ -241,6 +242,7 @@ if __name__ == "__main__":
     parser.add_argument("--hidden-units", default=256, type=int)
     parser.add_argument("--min-sentence", default=10, type=int)
     parser.add_argument("--max-sentence", default=14, type=int)
+    parser.add_argument("--warmup-steps", default=80, type=int)
     parser.add_argument("--test-split-size", default=0.01, type=float)
     parser.add_argument("--train-mode", default="not_attention", type=str)
     parser.add_argument("--attention-mode", default="luong", type=str)
@@ -271,6 +273,7 @@ if __name__ == "__main__":
                        epochs=args.epochs,
                        min_sentence=args.min_sentence,
                        max_sentence=args.max_sentence,
+                       warmup_steps=args.warmup_steps,
                        train_mode=args.train_mode,
                        attention_mode=args.attention_mode,
                        debug=args.debug).run()
