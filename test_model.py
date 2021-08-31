@@ -5,6 +5,33 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 
+
+def evaluation_with_attention(encoder, decoder_attention, test_ds):
+    """
+    :param test_ds: (inp_vocab, tar_vocab)
+    :param (inp_lang, tar_lang)
+    :return:
+    """
+    # Preprocessing testing data
+    for test_, test_y in test_ds.shuffle(buffer_size=1, seed=1):
+        test_x = tf.expand_dims(test_, axis=0)
+        first_state = encoder.init_hidden_state(batch_size=1)
+        encode_outs, last_state = encoder(test_x, first_state, training=False)
+
+        input_decode = tf.constant([tar_lang.word2id['<sos>']])
+        sentence = []
+        for _ in range(len(test_y)):
+            output, last_state = decoder_attention(input_decode, encode_outs, last_state, training=False)
+            pred_id = tf.argmax(output, axis=1).numpy()
+            input_decode = pred_id
+            sentence.append(pred_id[0])
+            print("-----------------------------------------------------------------")
+            print("Input    : ", inp_lang.vector_to_sentence(test_.numpy()))
+            print("Predicted: ", tar_lang.vector_to_sentence(sentence))
+            print("Target   : ", tar_lang.vector_to_sentence(test_y.numpy()))
+            print("=================================================================")
+
+
 if __name__ == '__main__':
     raw_vi, raw_en, inp_lang, tar_lang = DatasetLoader("dataset/train.vi.txt", "dataset/train.en.txt").build_dataset()
 
@@ -26,22 +53,12 @@ if __name__ == '__main__':
 
     # print("tmp_x", tmp_x.shape)
 
-    embedding_size = 64
-    vocab_size = 10000
-    hidden_unit = 256
-    BATCH_SIZE = 32
+    embedding_size = 256
+    hidden_unit = 1024
+    BATCH_SIZE = 1
 
-    encoder = Seq2SeqEncode(vocab_size, embedding_size, hidden_unit)
-    first_state = encoder.init_hidden_state(BATCH_SIZE)
-    encode_output, last_state = encoder(tmp_x, first_state)
-    print("================== Encoder ==================")
-    print("Output encode: ", encode_output.shape)
-    print("State_hidden: ", last_state[0].shape)
-    print("State_cell: ", last_state[1].shape)
-
-    decoder = BahdanauSeq2SeqDecode(vocab_size, embedding_size, hidden_unit)
-    decode_output, state = decoder(tmp_x[:, 0], encoder_outs=encode_output, state=last_state, training=False)
-    print("================== Decoder ==================")
-    print("Output decode: ", decode_output.shape)
-    print("State_hidden: ", state[0].shape)
-    print("State_cell: ", state[1].shape)
+    encoder = Seq2SeqEncode(inp_lang.vocab_size, embedding_size, hidden_unit)
+    encoder.load_weights("./save/encoder.h5")
+    decoder = LuongSeq2SeqDecoder(tar_lang.vocab_size, embedding_size, hidden_unit)
+    decoder.load_weights("./save/decoder.h5")
+    evaluation_with_attention(encoder, decoder, test_x)

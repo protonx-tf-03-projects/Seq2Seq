@@ -67,8 +67,6 @@ class SequenceToSequence:
         self.encoder = Seq2SeqEncode(self.inp_lang.vocab_size,
                                      self.embedding_size,
                                      self.hidden_units)
-        # Initialize first state
-        self.first_state = self.encoder.init_hidden_state(self.BATCH_SIZE)
 
         # Initialize decoder with attention
         if self.mode_training.lower() == "attention":
@@ -92,7 +90,7 @@ class SequenceToSequence:
             loss = 0
             for batch_size, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
                 with tf.GradientTape() as tape:
-                    encoder_outs, last_state = self.encoder(x, self.first_state)
+                    encoder_outs, last_state = self.encoder(x)
                     sos = tf.reshape(tf.constant([self.tar_lang.word2id['<sos>']] * self.BATCH_SIZE), shape=(-1, 1))
                     dec_input = tf.concat([sos, y[:, :-1]], 1)  # Teacher forcing
                     decode_out, _ = self.decoder(dec_input, last_state)
@@ -118,7 +116,7 @@ class SequenceToSequence:
             for batch_size, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
                 loss = 0
                 with tf.GradientTape() as tape:
-                    encoder_outs, last_state = self.encoder(x, self.first_state)
+                    encoder_outs, last_state = self.encoder(x)
                     dec_input = tf.constant([self.tar_lang.word2id['<sos>']] * self.BATCH_SIZE)
                     for i in range(1, y.shape[1]):
                         decode_out, _ = self.decoder_attention(dec_input, encoder_outs, last_state)
@@ -151,8 +149,7 @@ class SequenceToSequence:
         count = 0
         for test_, test_y in test_ds.shuffle(buffer_size=1, seed=1).take(test_ds_len):
             test_x = tf.expand_dims(test_, axis=0)
-            first_state = self.encoder.init_hidden_state(batch_size=1)
-            _, last_state = self.encoder(test_x, first_state, training=False)
+            _, last_state = self.encoder(test_x, training=False)
 
             input_decode = tf.reshape(tf.constant([self.tar_lang.word2id['<sos>']]), shape=(-1, 1))
             sentence = []
@@ -184,8 +181,7 @@ class SequenceToSequence:
         count = 0
         for test_, test_y in test_ds.shuffle(buffer_size=1, seed=1).take(test_ds_len):
             test_x = tf.expand_dims(test_, axis=0)
-            first_state = self.encoder.init_hidden_state(batch_size=1)
-            encode_outs, last_state = self.encoder(test_x, first_state, training=False)
+            encode_outs, last_state = self.encoder(test_x, training=False)
 
             input_decode = tf.constant([self.tar_lang.word2id['<sos>']])
             sentence = []

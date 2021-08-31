@@ -21,9 +21,8 @@ class Seq2SeqEncode(tf.keras.Model):
                                    return_sequences=True,
                                    return_state=True,
                                    kernel_initializer="glorot_uniform")
-        self.dense = Dense(hidden_units)
 
-    def __call__(self, x, first_state, *args, **kwargs):
+    def __call__(self, x, *args, **kwargs):
         """
         :input:
             - x: [batch_size, max_length]
@@ -33,9 +32,9 @@ class Seq2SeqEncode(tf.keras.Model):
             - state_h: [batch_size, hidden_units] - Current Hidden state
             - state_c: [batch_size, hidden_units] - Current Cell state
         """
+        first_state = self.init_hidden_state(x.shape[0])
         encode = self.embedding(x)
         encode, state_h, state_c = self.encode_layer_1(encode, first_state, **kwargs)
-        encode = self.dense(encode, **kwargs)
         return encode, [state_h, state_c]
 
     def init_hidden_state(self, batch_size):
