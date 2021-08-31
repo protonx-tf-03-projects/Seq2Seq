@@ -182,7 +182,7 @@ class SequenceToSequence:
             first_state = self.encoder.init_hidden_state(batch_size=1)
             encode_outs, last_state = self.encoder(test_x, first_state, training=False)
 
-            input_decode = np.array([self.tar_lang.word2id['<sos>']])
+            input_decode = tf.constant([self.tar_lang.word2id['<sos>']])
             sentence = []
             for _ in range(len(test_y)):
                 output, last_state = self.decoder_attention(input_decode, encode_outs, last_state, training=False)
