@@ -24,8 +24,7 @@ class SequenceToSequence:
                  max_sentence=14,
                  train_mode="attention",
                  attention_mode="luong",  # Bahdanau
-                 save_encoder="save/weights/encoder.h5",
-                 save_decoder="save/weights/decoder.h5",
+                 save_model="./save/weights/",
                  debug=False):
         self.inp_lang_path = inp_lang_path
         self.tar_lang_path = tar_lang_path
@@ -41,8 +40,8 @@ class SequenceToSequence:
         self.EPOCHS = epochs
         self.mode_training = train_mode
         self.attention_mode = attention_mode
-        self.save_encoder = save_encoder
-        self.save_decoder = save_decoder
+        self.save_encoder = save_model + "/encoder.h5"
+        self.save_decoder = save_model + "/decoder.h5"
         self.debug = debug
 
         # Load dataset
@@ -242,6 +241,7 @@ if __name__ == "__main__":
     parser.add_argument("--test-split-size", default=0.01, type=float)
     parser.add_argument("--train-mode", default="not_attention", type=str)
     parser.add_argument("--attention-mode", default="luong", type=str)
+    parser.add_argument("--save-model", default=None, type=str)
     parser.add_argument("--debug", default=False, type=bool)
 
     home_dir = os.getcwd()
@@ -272,6 +272,7 @@ if __name__ == "__main__":
                        max_sentence=args.max_sentence,
                        train_mode=args.train_mode,
                        attention_mode=args.attention_mode,
+                       save_model=args.save_model,
                        debug=args.debug).run()
 
     # python train.py --inp-lang="dataset/train.en.txt" --tar-lang="dataset/train.vi.txt" --hidden-units=256 --embedding-size=128 --epochs=200 --test-split-size=0.01 --train-mode="attention" --debug=True
