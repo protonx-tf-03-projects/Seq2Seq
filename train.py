@@ -85,6 +85,7 @@ class SequenceToSequence:
     def training(self, train_ds, N_BATCH):
         for epoch in range(self.EPOCHS):
             loss = 0
+            tmp = 0
             for batch_size, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
                 with tf.GradientTape() as tape:
                     encoder_outs, last_state = self.encoder(x, self.first_state)
@@ -101,13 +102,15 @@ class SequenceToSequence:
             print("\n=================================================================")
             print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
             print("=================================================================\n")
-
-        # self.encoder.save_weights(self.save_encoder)
-        # self.decoder.save_weights(self.save_decoder)
+            if bleu_score > tmp:
+                self.encoder.save_weights(self.save_encoder)
+                self.decoder.save_weights(self.save_decoder)
+                tmp = bleu_score
 
     def training_with_attention(self, train_ds, N_BATCH):
         for epoch in range(self.EPOCHS):
             total_loss = 0
+            tmp = 0
             for batch_size, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
                 loss = 0
                 with tf.GradientTape() as tape:
@@ -127,9 +130,10 @@ class SequenceToSequence:
             print("\n=================================================================")
             print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {bleu_score}')
             print("=================================================================\n")
-
-        # self.encoder.save_weights(self.save_encoder)
-        # self.decoder_attention.save_weights(self.save_decoder)
+            if bleu_score > tmp:
+                self.encoder.save_weights(self.save_encoder)
+                self.decoder_attention.save_weights(self.save_decoder)
+                tmp = bleu_score
 
     def evaluation(self, test_ds, debug=False):
         """
