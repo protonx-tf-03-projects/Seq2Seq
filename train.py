@@ -16,6 +16,7 @@ class Seq2Seq:
                  tar_lang_path,
                  embedding_size=64,
                  hidden_units=256,
+                 learning_rate=0.001,
                  test_split_size=0.005,
                  epochs=400,
                  batch_size=128,
@@ -24,6 +25,7 @@ class Seq2Seq:
                  warmup_steps=80,
                  train_mode="attention",
                  attention_mode="luong",  # Bahdanau
+                 use_lr_schedule=False,  # Bahdanau
                  debug=False):
         self.inp_lang_path = inp_lang_path
         self.tar_lang_path = tar_lang_path
@@ -53,7 +55,8 @@ class Seq2Seq:
                                                                                              self.min_sentence,
                                                                                              self.max_sentence).build_dataset()
         # Initialize optimizer
-        learning_rate = CustomSchedule(self.hidden_units, warmup_steps=warmup_steps)
+        if use_lr_schedule:
+            learning_rate = CustomSchedule(self.hidden_units, warmup_steps=warmup_steps)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
 
         # Initialize loss function
@@ -171,8 +174,10 @@ if __name__ == "__main__":
     parser.add_argument("--max-sentence", default=14, type=int)
     parser.add_argument("--warmup-steps", default=80, type=int)
     parser.add_argument("--test-split-size", default=0.01, type=float)
+    parser.add_argument("--learning-rate", default=0.01, type=float)
     parser.add_argument("--train-mode", default="not_attention", type=str)
     parser.add_argument("--attention-mode", default="luong", type=str)
+    parser.add_argument("--use-lr-schedule", default=False, type=bool)
     parser.add_argument("--debug", default=False, type=bool)
 
     args = parser.parse_args()
@@ -198,12 +203,14 @@ if __name__ == "__main__":
             embedding_size=args.embedding_size,
             hidden_units=args.hidden_units,
             test_split_size=args.test_split_size,
+            learning_rate=args.learning_rate,
             epochs=args.epochs,
             min_sentence=args.min_sentence,
             max_sentence=args.max_sentence,
             warmup_steps=args.warmup_steps,
             train_mode=args.train_mode,
             attention_mode=args.attention_mode,
+            use_lr_schedule=args.use_lr_schedule,
             debug=args.debug).run()
 
     # python train.py --inp-lang="dataset/train.en.txt" --tar-lang="dataset/train.vi.txt" --hidden-units=256 --embedding-size=128 --epochs=200 --test-split-size=0.01 --train-mode="attention" --debug=True
