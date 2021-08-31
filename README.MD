@@ -1,6 +1,4 @@
-# Project Name <--- Seq2Seq
-
-Library Logo <--- **FIXME**
+# Seq2Seq
 
 <p align="center">
     <img src='https://storage.googleapis.com/protonx-cloud-storage/transformer/protonx-transf.png' width=200 class="center">
@@ -22,27 +20,26 @@ Advisors:
 - Email: advisor emails <--- **FIXME**
 
 ## I.  Set up environment
-- Step 1: <--- **FIXME**
+- Step 1: 
 
+```python
+conda create -n {your_env_name} python==3.7.0
+```
+
+- Step 2:
 ```python
 conda env create -f environment.yml
 ```
 
-- Step 2: <--- **FIXME**
-```
-
-```
-
-- Step 3: <--- **FIXME**
-
-```
-
+- Step 3:
+```python
+conda activate {your_env_name}
 ``` 
 
 ## II.  Set up your dataset
 
-- Guide user how to download your data and set the data pipeline <--- **FIXME**
-- References: [NLP](https://github.com/bangoc123/transformer) and [CV](https://github.com/bangoc123/mlp-mixer)
+- Guide user how to download your data and set the data pipeline
+- References: [NLP](https://github.com/protonx-tf-03-projects/Seq2Seq/tree/main/dataset)
 
 ## III. Training Process
 
@@ -54,7 +51,10 @@ Training script:
 
 ```python
 
-python train.py --epochs ${epochs} --input-lang en --target-lang vi --input-path ${path_to_en_text_file} --target-path ${path_to_vi_text_file}
+python train.py --epochs=${epochs} --inp-lang=${path_to_en_text_file} --target-lang=${path_to_vi_text_file} \
+                --batch-size=128  --hidden-units=1024 --embedding-size=512 --min-sentence=10 --max-sentence=14 \
+                --epochs=1000 --train-mode="attention" --test-split-size=0.001 --learning-rate=0.005 --debug=True
+                 
 
 ```
 **FIXME**
@@ -63,16 +63,17 @@ Example:
 
 ```python
 
-!python train.py --train-folder ${train_folder} --valid-folder ${valid_folder} --num-classes 2 --patch-size 5 --image-size 150 --lr 0.0001 --epochs 200 --num-heads 12 
-
+!python train.py --epochs=${epochs} --inp-lang=${path_to_en_text_file} --target-lang=${path_to_vi_text_file} \
+                 --batch-size=128  --hidden-units=1024 --embedding-size=512 --min-sentence=10 --max-sentence=14 \
+                 --epochs=1000 --train-mode="attention" --test-split-size=0.001 --learning-rate=0.005 --debug=True
 ``` 
 **FIXME**
 
 There are some important arguments for the script you should consider when running it:
 
-- `train-folder`: The folder of training data
-- `valid-folder`: The folder of validation data
-- ...
+- `dataset`: The folder of dataset
+  - `train.en.txt`: input language
+  - `train.vi.txt`: target language
 
 ## IV. Predict Process
 
@@ -84,18 +85,10 @@ python predict.py --test-data ${link_to_test_data}
 
 **FIXME**
 
-Your implementation
-```
-Epoch 7/10
-782/782 [==============================] - 261s 334ms/step - loss: 0.8315 - acc: 0.8565 - val_loss: 0.8357 - val_acc: 0.7978
-Epoch 8/10
-782/782 [==============================] - 261s 334ms/step - loss: 0.3182 - acc: 0.8930 - val_loss: 0.6161 - val_acc: 0.8047
-Epoch 9/10
-782/782 [==============================] - 261s 333ms/step - loss: 1.1965 - acc: 0.8946 - val_loss: 3.9842 - val_acc: 0.7855
-Epoch 10/10
-782/782 [==============================] - 261s 333ms/step - loss: 0.4717 - acc: 0.8878 - val_loss: 0.4894 - val_acc: 0.8262
-
-```
+Your implementation using Encode-Decode:
+<b align="center">
+<img src="F:\4. PROJECT_TF_03\Seq2Seq\assets\image.png"/>
+</b>
 
 **FIXME**
 

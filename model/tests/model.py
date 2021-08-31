@@ -22,12 +22,7 @@ class Seq2SeqEncode(tf.keras.Model):
                                    return_sequences=True,
                                    return_state=True,
                                    kernel_initializer="glorot_uniform")
-
-        self.encode_layer_2 = LSTM(hidden_units,
-                                   recurrent_dropout=0.2,
-                                   return_sequences=True,
-                                   return_state=True,
-                                   kernel_initializer="glorot_uniform")
+        self.dense = Dense(hidden_units)
 
     def __call__(self, x, first_state, *args, **kwargs):
         """
@@ -41,7 +36,7 @@ class Seq2SeqEncode(tf.keras.Model):
         """
         encode = self.embedding(x)
         encode, state_h, state_c = self.encode_layer_1(encode, first_state, **kwargs)
-        encode, state_h, state_c = self.encode_layer_2(encode, **kwargs)
+        encode = self.dense(encode, **kwargs)
         return encode, [state_h, state_c]
 
     def init_hidden_state(self, batch_size):
@@ -65,11 +60,6 @@ class Seq2SeqDecode(tf.keras.Model):
                                    return_sequences=True,
                                    return_state=True,
                                    kernel_initializer="glorot_uniform")
-        self.decode_layer_2 = LSTM(hidden_units,
-                                   recurrent_dropout=0.2,
-                                   return_sequences=True,
-                                   return_state=True,
-                                   kernel_initializer="glorot_uniform")
         self.dense = Dense(vocab_size)
 
     def __call__(self, x, state, *args, **kwargs):
@@ -88,7 +78,6 @@ class Seq2SeqDecode(tf.keras.Model):
 
         decode = self.embedding(x)  # [Batch_size, vocab_length, Embedding_size]
         decode, state_h, state_c = self.decode_layer_1(decode, state, **kwargs)
-        decode, state_h, state_c = self.decode_layer_2(decode, **kwargs)
         output_decode = self.dense(decode)
         return output_decode, [state_h, state_c]
 
@@ -142,11 +131,6 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
                                    return_sequences=True,
                                    return_state=True,
                                    kernel_initializer="glorot_uniform")
-        self.decode_layer_2 = LSTM(hidden_units,
-                                   recurrent_dropout=0.2,
-                                   return_sequences=True,
-                                   return_state=True,
-                                   kernel_initializer="glorot_uniform")
         self.attention = Bahdanau_Attention(hidden_units=hidden_units)
         self.dense = Dense(vocab_size)
 
@@ -170,7 +154,6 @@ class BahdanauSeq2SeqDecode(tf.keras.Model):
         context_vector = tf.expand_dims(context_vector, axis=1)
         decode_inp = tf.concat([x, context_vector], axis=-1)  # vocab_length
         decode, state_h, state_c = self.decode_layer_1(decode_inp, state, **kwargs)
-        decode, state_h, state_c = self.decode_layer_2(decode, **kwargs)
         decode = tf.reshape(decode, (-1, decode.shape[2]))
         decode_output = self.dense(decode)
         return decode_output, [state_h, state_c]
@@ -186,11 +169,6 @@ class LuongSeq2SeqDecoder(tf.keras.Model):
         super(LuongSeq2SeqDecoder, self).__init__(**kwargs)
         self.embedding = Embedding(vocab_size, embedding_size)
         self.decode_layer_1 = LSTM(hidden_units,
-                                   recurrent_dropout=0.2,
-                                   return_sequences=True,
-                                   return_state=True,
-                                   kernel_initializer="glorot_uniform")
-        self.decode_layer_2 = LSTM(hidden_units,
                                    recurrent_dropout=0.2,
                                    return_sequences=True,
                                    return_state=True,
@@ -214,12 +192,11 @@ class LuongSeq2SeqDecoder(tf.keras.Model):
         """
         x = tf.expand_dims(x, axis=1)
         x = self.embedding(x)
-        decode_outs, state_h, state_c = self.decode_layer_1(x, initial_state=state)
-        decode_outs, state_h, state_c = self.decode_layer_2(decode_outs)
-        context_vector, att_weights = self.attention(encoder_outs, decode_outs)
-        concat = tf.concat([decode_outs, context_vector], axis=-1)
-        concat = tf.reshape(concat, (-1, concat.shape[2]))
-        outs = self.dense(concat)
+        context_vector, att_weights = self.attention(encoder_outs, x)
+        concat = tf.concat([x, context_vector], axis=-1)
+        decode_outs, state_h, state_c = self.decode_layer_1(concat, initial_state=state)
+        decode_outs = tf.reshape(decode_outs, (-1, decode_outs.shape[2]))
+        outs = self.dense(decode_outs)
         return outs, [state_h, state_c]
 
 
