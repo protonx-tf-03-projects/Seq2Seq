@@ -51,11 +51,10 @@ Training script:
 
 ```python
 
-python train.py --epochs=${epochs} --inp-lang=${path_to_en_text_file} --target-lang=${path_to_vi_text_file} \
-                --batch-size=128  --hidden-units=1024 --embedding-size=512 --min-sentence=10 --max-sentence=14 \
-                --epochs=1000 --train-mode="attention" --test-split-size=0.001 --learning-rate=0.005 --debug=True
-                 
-
+python train.py  --inp-lang=${path_to_en_text_file} --target-lang=${path_to_vi_text_file} \
+                 --batch-size=128 --hidden-units=512 --embedding-size=256 \
+                 --epochs=1000 --train-mode="not_attention" --test-split-size=0.05 \
+                 --min-sentence=10 --max-sentence=14 --warmup-steps=60 --debug=True
 ```
 **FIXME**
 
@@ -63,9 +62,10 @@ Example:
 
 ```python
 
-!python train.py --epochs=${epochs} --inp-lang=${path_to_en_text_file} --target-lang=${path_to_vi_text_file} \
-                 --batch-size=128  --hidden-units=1024 --embedding-size=512 --min-sentence=10 --max-sentence=14 \
-                 --epochs=1000 --train-mode="attention" --test-split-size=0.001 --learning-rate=0.005 --debug=True
+!python train.py --inp-lang=${path_to_en_text_file} --target-lang=${path_to_vi_text_file} \
+                 --batch-size=128 --hidden-units=512 --embedding-size=256 \
+                 --epochs=1000 --train-mode="not_attention" --test-split-size=0.05 \
+                 --min-sentence=10 --max-sentence=14 --warmup-steps=60 --debug=True 
 ``` 
 **FIXME**
 

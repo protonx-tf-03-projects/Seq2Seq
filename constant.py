@@ -17,13 +17,13 @@ class Bleu_score:
         super().__init__()
 
     def remove_oov(self, sentence):
-        return [i for i in sentence.split(" ") if i not in ["<eos>", "<sos>"]]
+        return [i for i in sentence.split(" ") if i not in ["<sos>", "<eos>"]]
 
-    def __call__(self, predicted_sentence, target_sentences, n_grams=3):
-        predicted_sentence = self.remove_oov(predicted_sentence)
-        target_sentences = self.remove_oov(target_sentences)
-        pred_length = len(predicted_sentence)
-        target_length = len(target_sentences)
+    def __call__(self, pred, target, n_grams=3):
+        pred = self.remove_oov(pred)
+        target = self.remove_oov(target)
+        pred_length = len(pred)
+        target_length = len(target)
 
         if pred_length < n_grams:
             return 0
@@ -32,12 +32,12 @@ class Bleu_score:
             for k in range(1, n_grams + 1):
                 label_subs = collections.defaultdict(int)
                 for i in range(target_length - k + 1):
-                    label_subs[" ".join(target_sentences[i:i + k])] += 1
+                    label_subs[" ".join(target[i:i + k])] += 1
 
                 num_matches = 0
                 for i in range(pred_length - k + 1):
-                    if label_subs[" ".join(predicted_sentence[i:i + k])] > 0:
-                        label_subs[" ".join(predicted_sentence[i:i + k])] -= 1
+                    if label_subs[" ".join(pred[i:i + k])] > 0:
+                        label_subs[" ".join(pred[i:i + k])] -= 1
                         num_matches += 1
                 score *= np.power(num_matches / (pred_length - k + 1), np.power(0.5, k))
             return score
@@ -97,10 +97,78 @@ class CustomSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
         return tf.math.rsqrt(self.hidden_units) * tf.math.minimum(arg1, arg2)
 
 
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    temp_learning_rate_schedule = CustomSchedule(128)
-    plt.plot(temp_learning_rate_schedule(tf.range(400, dtype=tf.float32)))
-    plt.ylabel("Learning Rate")
-    plt.xlabel("Train Step")
-    plt.show()
+def evaluation(model,
+               test_ds,
+               val_function,
+               inp_builder,
+               tar_builder,
+               test_split_size,
+               debug=False):
+    """
+    :param test_ds: (inp_vocab, tar_vocab)
+    :param (inp_lang, tar_lang)
+    :return:
+    """
+    # Preprocessing testing data
+    score = 0.0
+    count = 0
+    test_ds_len = int(len(test_ds) * test_split_size)
+    for test_, test_y in test_ds.shuffle(buffer_size=1, seed=1).take(test_ds_len):
+        test_x = tf.expand_dims(test_, axis=0)
+        _, last_state = model.encoder(test_x)
+
+        input_decode = tf.reshape(tf.constant([tar_builder.word2id['<sos>']]), shape=(-1, 1))
+        sentence = []
+        for _ in range(len(test_y)):
+            output, last_state = model.decoder(input_decode, last_state, training=False)
+            output = tf.argmax(output, axis=2).numpy()
+            input_decode = output
+            sentence.append(output[0][0])
+
+        score += val_function(tar_builder.vector_to_sentence(sentence),
+                              tar_builder.vector_to_sentence(test_y.numpy()))
+        if debug and count <= 5:
+            print("-----------------------------------------------------------------")
+            print("Input    : ", inp_builder.vector_to_sentence(test_.numpy()))
+            print("Predicted: ", tar_builder.vector_to_sentence(sentence))
+            print("Target   : ", tar_builder.vector_to_sentence(test_y.numpy()))
+            count += 1
+    return score / test_ds_len
+
+
+def evaluation_with_attention(model,
+                              test_ds,
+                              val_function,
+                              inp_builder,
+                              tar_builder,
+                              test_split_size,
+                              debug=False):
+    """
+    :param test_ds: (inp_vocab, tar_vocab)
+    :param (inp_lang, tar_lang)
+    :return:
+    """
+    # Preprocessing testing data
+    score = 0.0
+    count = 0
+    test_ds_len = int(len(test_ds) * test_split_size)
+    for test_, test_y in test_ds.shuffle(buffer_size=1, seed=1).take(test_ds_len):
+        test_x = tf.expand_dims(test_, axis=0)
+        encode_outs, last_state = model.encoder(test_x)
+        input_decode = tf.constant([tar_builder.word2id['<sos>']])
+        sentence = []
+        for _ in range(len(test_y)):
+            output, last_state = model.decoder(input_decode, encode_outs, last_state, training=False)
+            pred_id = tf.argmax(output, axis=1).numpy()
+            input_decode = pred_id
+            sentence.append(pred_id[0])
+
+        score += val_function(tar_builder.vector_to_sentence(sentence),
+                              tar_builder.vector_to_sentence(test_y.numpy()))
+        if debug and count <= 5:
+            print("-----------------------------------------------------------------")
+            print("Input    : ", inp_builder.vector_to_sentence(test_.numpy()))
+            print("Predicted: ", tar_builder.vector_to_sentence(sentence))
+            print("Target   : ", tar_builder.vector_to_sentence(test_y.numpy()))
+            count += 1
+    return score / test_ds_len

@@ -5,7 +5,7 @@ import tensorflow as tf
 from tqdm import tqdm
 from data import DatasetLoader
 from argparse import ArgumentParser
-from constant import MaskedSoftmaxCELoss, Bleu_score, CustomSchedule
+from constant import MaskedSoftmaxCELoss, Bleu_score, CustomSchedule, evaluation, evaluation_with_attention
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from model.tests.model import SequenceToSequence
 
@@ -48,10 +48,10 @@ class Seq2Seq:
         self.debug = debug
 
         # Load dataset
-        self.inp_tensor, self.tar_tensor, self.inp_lang, self.tar_lang = DatasetLoader(self.inp_lang_path,
-                                                                                       self.tar_lang_path,
-                                                                                       self.min_sentence,
-                                                                                       self.max_sentence).build_dataset()
+        self.inp_tensor, self.tar_tensor, self.inp_builder, self.tar_builder = DatasetLoader(self.inp_lang_path,
+                                                                                             self.tar_lang_path,
+                                                                                             self.min_sentence,
+                                                                                             self.max_sentence).build_dataset()
         # Initialize optimizer
         learning_rate = CustomSchedule(self.hidden_units, warmup_steps=warmup_steps)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
@@ -63,8 +63,8 @@ class Seq2Seq:
         self.bleu = Bleu_score()
 
         # Initialize Seq2Seq model
-        self.model = SequenceToSequence(self.inp_lang.vocab_size,
-                                        self.tar_lang.vocab_size,
+        self.model = SequenceToSequence(self.inp_builder.vocab_size,
+                                        self.tar_builder.vocab_size,
                                         self.embedding_size,
                                         self.hidden_units,
                                         self.train_mode,
@@ -76,7 +76,7 @@ class Seq2Seq:
             loss = 0
             for batch_size, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
                 with tf.GradientTape() as tape:
-                    sos = tf.reshape(tf.constant([self.tar_lang.word2id['<sos>']] * self.BATCH_SIZE), shape=(-1, 1))
+                    sos = tf.reshape(tf.constant([self.tar_builder.word2id['<sos>']] * self.BATCH_SIZE), shape=(-1, 1))
                     dec_input = tf.concat([sos, y[:, :-1]], 1)  # Teacher forcing
                     outs = self.model(x, dec_input)
                     loss += self.loss(y, outs)
@@ -85,13 +85,20 @@ class Seq2Seq:
                 grads = tape.gradient(loss, train_vars)
                 self.optimizer.apply_gradients(zip(grads, train_vars))
 
-            bleu_score = self.evaluation(train_ds, self.debug)
+            bleu_score = evaluation(model=self.model,
+                                    test_ds=train_ds,
+                                    val_function=self.bleu,
+                                    inp_builder=self.inp_builder,
+                                    tar_builder=self.tar_builder,
+                                    test_split_size=self.test_split_size,
+                                    debug=self.debug)
             print("\n=================================================================")
             print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
-            print("=================================================================\n")
             if bleu_score > tmp:
                 self.model.save_weights(self.save_model)
+                print("[INFO] Saved model in {} direction!".format(self.save_model))
                 tmp = bleu_score
+            print("=================================================================\n")
 
     def training_with_attention(self, train_ds, N_BATCH):
         tmp = 0
@@ -100,7 +107,7 @@ class Seq2Seq:
             for batch_size, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
                 loss = 0
                 with tf.GradientTape() as tape:
-                    dec_input = tf.constant([self.tar_lang.word2id['<sos>']] * self.BATCH_SIZE)
+                    dec_input = tf.constant([self.tar_builder.word2id['<sos>']] * self.BATCH_SIZE)
                     for i in range(1, y.shape[1]):
                         decode_out = self.model(x, dec_input)
                         loss += self.loss(y[:, i], decode_out)
@@ -111,76 +118,20 @@ class Seq2Seq:
                 self.optimizer.apply_gradients(zip(grads, train_vars))
                 total_loss += loss
 
-            bleu_score = self.evaluation_with_attention(train_ds, self.debug)
+            bleu_score = evaluation_with_attention(model=self.model,
+                                                   test_ds=train_ds,
+                                                   val_function=self.bleu,
+                                                   inp_builder=self.inp_builder,
+                                                   tar_builder=self.tar_builder,
+                                                   test_split_size=self.test_split_size,
+                                                   debug=self.debug)
             print("\n=================================================================")
             print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {bleu_score}')
-            print("=================================================================\n")
             if bleu_score > tmp:
                 self.model.save_weights(self.save_model)
+                print("[INFO] Saved model in {} direction!".format(self.save_model))
                 tmp = bleu_score
-
-    def evaluation(self, test_ds, debug=False):
-        """
-        :param test_ds: (inp_vocab, tar_vocab)
-        :param (inp_lang, tar_lang)
-        :return:
-        """
-        # Preprocessing testing data
-        score = 0.0
-        count = 0
-        test_ds_len = int(len(test_ds) * self.test_split_size)
-        for test_, test_y in test_ds.shuffle(buffer_size=1, seed=1).take(test_ds_len):
-            test_x = tf.expand_dims(test_, axis=0)
-            _, last_state = self.model.encoder(test_x)
-
-            input_decode = tf.reshape(tf.constant([self.tar_lang.word2id['<sos>']]), shape=(-1, 1))
-            sentence = []
-            for _ in range(len(test_y)):
-                output, last_state = self.model.decoder(input_decode, last_state, training=False)
-                output = tf.argmax(output, axis=2).numpy()
-                input_decode = output
-                sentence.append(output[0][0])
-
-            score += self.bleu(self.tar_lang.vector_to_sentence(sentence),
-                               self.tar_lang.vector_to_sentence(test_y.numpy()))
-            if debug and count <= 5:
-                print("-----------------------------------------------------------------")
-                print("Input    : ", self.inp_lang.vector_to_sentence(test_.numpy()))
-                print("Predicted: ", self.tar_lang.vector_to_sentence(sentence))
-                print("Target   : ", self.tar_lang.vector_to_sentence(test_y.numpy()))
-                count += 1
-        return score / test_ds_len
-
-    def evaluation_with_attention(self, test_ds, debug=True):
-        """
-        :param test_ds: (inp_vocab, tar_vocab)
-        :param (inp_lang, tar_lang)
-        :return:
-        """
-        # Preprocessing testing data
-        score = 0.0
-        count = 0
-        test_ds_len = int(len(test_ds) * self.test_split_size)
-        for test_, test_y in test_ds.shuffle(buffer_size=1, seed=1).take(test_ds_len):
-            test_x = tf.expand_dims(test_, axis=0)
-            encode_outs, last_state = self.model.encoder(test_x)
-            input_decode = tf.constant([self.tar_lang.word2id['<sos>']])
-            sentence = []
-            for _ in range(len(test_y)):
-                output, last_state = self.model.decoder(input_decode, encode_outs, last_state, training=False)
-                pred_id = tf.argmax(output, axis=1).numpy()
-                input_decode = pred_id
-                sentence.append(pred_id[0])
-
-            score += self.bleu(self.tar_lang.vector_to_sentence(sentence),
-                               self.tar_lang.vector_to_sentence(test_y.numpy()))
-            if debug and count <= 5:
-                print("-----------------------------------------------------------------")
-                print("Input    : ", self.inp_lang.vector_to_sentence(test_.numpy()))
-                print("Predicted: ", self.tar_lang.vector_to_sentence(sentence))
-                print("Target   : ", self.tar_lang.vector_to_sentence(test_y.numpy()))
-                count += 1
-        return score / test_ds_len
+            print("=================================================================\n")
 
     def run(self):
         # Padding in sequences
