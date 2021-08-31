@@ -25,7 +25,7 @@ class Seq2Seq:
                  warmup_steps=80,
                  train_mode="attention",
                  attention_mode="luong",  # Bahdanau
-                 use_lr_schedule=False,  # Bahdanau
+                 use_lr_schedule=False,
                  debug=False):
         self.inp_lang_path = inp_lang_path
         self.tar_lang_path = tar_lang_path
