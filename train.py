@@ -7,10 +7,10 @@ from data import DatasetLoader
 from argparse import ArgumentParser
 from constant import MaskedSoftmaxCELoss, Bleu_score, CustomSchedule
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from model.tests.model import Seq2SeqEncode, Seq2SeqDecode, BahdanauSeq2SeqDecode, LuongSeq2SeqDecoder
+from model.tests.model import SequenceToSequence
 
 
-class SequenceToSequence:
+class Seq2Seq:
     def __init__(self,
                  inp_lang_path,
                  tar_lang_path,
@@ -37,15 +37,14 @@ class SequenceToSequence:
 
         self.BATCH_SIZE = batch_size
         self.EPOCHS = epochs
-        self.mode_training = train_mode
+        self.train_mode = train_mode
         self.attention_mode = attention_mode
 
         path_save = os.getcwd() + "/saved_models/"
         if not os.path.exists(path_save):
             os.mkdir(path_save)
 
-        self.save_encoder = path_save + "/encoder.h5"
-        self.save_decoder = path_save + "/decoder.h5"
+        self.save_model = path_save
         self.debug = debug
 
         # Load dataset
@@ -63,26 +62,13 @@ class SequenceToSequence:
         # Initialize Bleu function
         self.bleu = Bleu_score()
 
-        # Initialize encoder
-        self.encoder = Seq2SeqEncode(self.inp_lang.vocab_size,
-                                     self.embedding_size,
-                                     self.hidden_units)
-
-        # Initialize decoder with attention
-        if self.mode_training.lower() == "attention":
-            if self.attention_mode.lower() == "luong":
-                self.decoder_attention = LuongSeq2SeqDecoder(self.tar_lang.vocab_size,
-                                                             self.embedding_size,
-                                                             self.hidden_units)
-            else:
-                self.decoder_attention = BahdanauSeq2SeqDecode(self.tar_lang.vocab_size,
-                                                               self.embedding_size,
-                                                               self.hidden_units)
-        else:
-            # Initialize decoder
-            self.decoder = Seq2SeqDecode(self.tar_lang.vocab_size,
-                                         self.embedding_size,
-                                         self.hidden_units)
+        # Initialize Seq2Seq model
+        self.model = SequenceToSequence(self.inp_lang.vocab_size,
+                                        self.tar_lang.vocab_size,
+                                        self.embedding_size,
+                                        self.hidden_units,
+                                        self.train_mode,
+                                        self.attention_mode)
 
     def training(self, train_ds, N_BATCH):
         tmp = 0
@@ -90,13 +76,12 @@ class SequenceToSequence:
             loss = 0
             for batch_size, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
                 with tf.GradientTape() as tape:
-                    encoder_outs, last_state = self.encoder(x)
                     sos = tf.reshape(tf.constant([self.tar_lang.word2id['<sos>']] * self.BATCH_SIZE), shape=(-1, 1))
                     dec_input = tf.concat([sos, y[:, :-1]], 1)  # Teacher forcing
-                    decode_out, _ = self.decoder(dec_input, last_state)
-                    loss += self.loss(y, decode_out)
+                    outs = self.model(x, dec_input)
+                    loss += self.loss(y, outs)
 
-                train_vars = self.encoder.trainable_variables + self.decoder.trainable_variables
+                train_vars = self.model.trainable_variables
                 grads = tape.gradient(loss, train_vars)
                 self.optimizer.apply_gradients(zip(grads, train_vars))
 
@@ -105,8 +90,7 @@ class SequenceToSequence:
             print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
             print("=================================================================\n")
             if bleu_score > tmp:
-                self.encoder.save_weights(self.save_encoder)
-                self.decoder.save_weights(self.save_decoder)
+                self.model.save_weights(self.save_model)
                 tmp = bleu_score
 
     def training_with_attention(self, train_ds, N_BATCH):
@@ -116,14 +100,13 @@ class SequenceToSequence:
             for batch_size, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
                 loss = 0
                 with tf.GradientTape() as tape:
-                    encoder_outs, last_state = self.encoder(x)
                     dec_input = tf.constant([self.tar_lang.word2id['<sos>']] * self.BATCH_SIZE)
                     for i in range(1, y.shape[1]):
-                        decode_out, _ = self.decoder_attention(dec_input, encoder_outs, last_state)
+                        decode_out = self.model(x, dec_input)
                         loss += self.loss(y[:, i], decode_out)
                         dec_input = y[:, i]
 
-                train_vars = self.encoder.trainable_variables + self.decoder_attention.trainable_variables
+                train_vars = self.model.trainable_variables
                 grads = tape.gradient(loss, train_vars)
                 self.optimizer.apply_gradients(zip(grads, train_vars))
                 total_loss += loss
@@ -133,8 +116,7 @@ class SequenceToSequence:
             print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {bleu_score}')
             print("=================================================================\n")
             if bleu_score > tmp:
-                self.encoder.save_weights(self.save_encoder)
-                self.decoder_attention.save_weights(self.save_decoder)
+                self.model.save_weights(self.save_model)
                 tmp = bleu_score
 
     def evaluation(self, test_ds, debug=False):
@@ -145,19 +127,20 @@ class SequenceToSequence:
         """
         # Preprocessing testing data
         score = 0.0
-        test_ds_len = int(len(test_ds) * self.test_split_size)
         count = 0
+        test_ds_len = int(len(test_ds) * self.test_split_size)
         for test_, test_y in test_ds.shuffle(buffer_size=1, seed=1).take(test_ds_len):
             test_x = tf.expand_dims(test_, axis=0)
-            _, last_state = self.encoder(test_x, training=False)
+            _, last_state = self.model.encoder(test_x)
 
             input_decode = tf.reshape(tf.constant([self.tar_lang.word2id['<sos>']]), shape=(-1, 1))
             sentence = []
             for _ in range(len(test_y)):
-                output, last_state = self.decoder(input_decode, last_state, training=False)
+                output, last_state = self.model.decoder(input_decode, last_state, training=False)
                 output = tf.argmax(output, axis=2).numpy()
                 input_decode = output
                 sentence.append(output[0][0])
+
             score += self.bleu(self.tar_lang.vector_to_sentence(sentence),
                                self.tar_lang.vector_to_sentence(test_y.numpy()))
             if debug and count <= 5:
@@ -165,8 +148,7 @@ class SequenceToSequence:
                 print("Input    : ", self.inp_lang.vector_to_sentence(test_.numpy()))
                 print("Predicted: ", self.tar_lang.vector_to_sentence(sentence))
                 print("Target   : ", self.tar_lang.vector_to_sentence(test_y.numpy()))
-                print("=================================================================")
-            count += 1
+                count += 1
         return score / test_ds_len
 
     def evaluation_with_attention(self, test_ds, debug=True):
@@ -177,16 +159,15 @@ class SequenceToSequence:
         """
         # Preprocessing testing data
         score = 0.0
-        test_ds_len = int(len(test_ds) * self.test_split_size)
         count = 0
+        test_ds_len = int(len(test_ds) * self.test_split_size)
         for test_, test_y in test_ds.shuffle(buffer_size=1, seed=1).take(test_ds_len):
             test_x = tf.expand_dims(test_, axis=0)
-            encode_outs, last_state = self.encoder(test_x, training=False)
-
+            encode_outs, last_state = self.model.encoder(test_x)
             input_decode = tf.constant([self.tar_lang.word2id['<sos>']])
             sentence = []
             for _ in range(len(test_y)):
-                output, last_state = self.decoder_attention(input_decode, encode_outs, last_state, training=False)
+                output, last_state = self.model.decoder(input_decode, encode_outs, last_state, training=False)
                 pred_id = tf.argmax(output, axis=1).numpy()
                 input_decode = pred_id
                 sentence.append(pred_id[0])
@@ -198,8 +179,7 @@ class SequenceToSequence:
                 print("Input    : ", self.inp_lang.vector_to_sentence(test_.numpy()))
                 print("Predicted: ", self.tar_lang.vector_to_sentence(sentence))
                 print("Target   : ", self.tar_lang.vector_to_sentence(test_y.numpy()))
-                print("=================================================================")
-            count += 1
+                count += 1
         return score / test_ds_len
 
     def run(self):
@@ -219,7 +199,7 @@ class SequenceToSequence:
         N_BATCH = train_x.shape[0] // self.BATCH_SIZE
 
         # Training
-        if self.mode_training.lower() == "attention":
+        if self.train_mode.lower() == "attention":
             self.training_with_attention(train_ds, N_BATCH)
         else:
             self.training(train_ds, N_BATCH)
@@ -244,34 +224,35 @@ if __name__ == "__main__":
     parser.add_argument("--attention-mode", default="luong", type=str)
     parser.add_argument("--debug", default=False, type=bool)
 
-    home_dir = os.getcwd()
     args = parser.parse_args()
 
     # FIXME
     # Project Description
 
-    print('---------------------Welcome to ${Hợp tác xã kiên trì}-------------------')
-    print('Github: ${Xunino}')
-    print('Email: ${ndlinh.ai@gmail.com}')
-    print('---------------------------------------------------------------------')
-    print(f'Training ${SequenceToSequence} model with hyper-params:')  # FIXME
-    print(args)
-    print('===========================')
+    print('---------------------Welcome to Hợp tác xã kiên trì-------------------')
+    print('Github: Xunino')
+    print('Email: ndlinh.ai@gmail.com')
+    print('------------------------------------------------------------------------')
+    print(f'Training Sequences To Sequences model with hyper-params:')
+    print('------------------------------------')
+    for k, v in vars(args).items():
+        print(f"|  +) {k} = {v}")
+    print('====================================')
 
     # FIXME
     # Do Training
-    SequenceToSequence(inp_lang_path=args.inp_lang,
-                       tar_lang_path=args.tar_lang,
-                       batch_size=args.batch_size,
-                       embedding_size=args.embedding_size,
-                       hidden_units=args.hidden_units,
-                       test_split_size=args.test_split_size,
-                       epochs=args.epochs,
-                       min_sentence=args.min_sentence,
-                       max_sentence=args.max_sentence,
-                       warmup_steps=args.warmup_steps,
-                       train_mode=args.train_mode,
-                       attention_mode=args.attention_mode,
-                       debug=args.debug).run()
+    Seq2Seq(inp_lang_path=args.inp_lang,
+            tar_lang_path=args.tar_lang,
+            batch_size=args.batch_size,
+            embedding_size=args.embedding_size,
+            hidden_units=args.hidden_units,
+            test_split_size=args.test_split_size,
+            epochs=args.epochs,
+            min_sentence=args.min_sentence,
+            max_sentence=args.max_sentence,
+            warmup_steps=args.warmup_steps,
+            train_mode=args.train_mode,
+            attention_mode=args.attention_mode,
+            debug=args.debug).run()
 
     # python train.py --inp-lang="dataset/train.en.txt" --tar-lang="dataset/train.vi.txt" --hidden-units=256 --embedding-size=128 --epochs=200 --test-split-size=0.01 --train-mode="attention" --debug=True
