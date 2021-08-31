@@ -53,7 +53,7 @@ class SequenceToSequence:
                                                                                        self.min_sentence,
                                                                                        self.max_sentence).build_dataset()
         # Initialize optimizer
-        learning_rate = CustomSchedule(self.hidden_units)
+        learning_rate = CustomSchedule(self.hidden_units, warmup_steps=80)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
 
         # Initialize loss function
@@ -275,4 +275,4 @@ if __name__ == "__main__":
                        attention_mode=args.attention_mode,
                        debug=args.debug).run()
 
-    # python train.py --inp-lang="dataset/train.en.txt" --tar-lang="dataset/train.vi.txt" --hidden-units=256 --embedding-size=128 --epochs=200 --test-split-size=0.01 --train-mode="attention" --save-mode="./save" --debug=True
+    # python train.py --inp-lang="dataset/train.en.txt" --tar-lang="dataset/train.vi.txt" --hidden-units=256 --embedding-size=128 --epochs=200 --test-split-size=0.01 --train-mode="attention" --debug=True
