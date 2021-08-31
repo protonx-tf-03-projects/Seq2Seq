@@ -76,3 +76,31 @@ class MaskedSoftmaxCELoss(tf.keras.losses.Loss):
         unweighted_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(label, pred)
         weighted_loss = tf.reduce_mean(unweighted_loss * weights_mask)
         return weighted_loss
+
+
+class CustomSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
+    """
+        Following with learning rate schedule in paper: https://arxiv.org/pdf/1706.03762.pdf
+    """
+
+    def __init__(self, hidden_units, warmup_steps=250):
+        super(CustomSchedule, self).__init__()
+
+        self.hidden_units = hidden_units
+        self.hidden_units = tf.cast(self.hidden_units, tf.float32)
+
+        self.warmup_steps = warmup_steps
+
+    def __call__(self, step):
+        arg1 = tf.math.rsqrt(step)
+        arg2 = step * (self.warmup_steps ** -1.5)
+        return tf.math.rsqrt(self.hidden_units) * tf.math.minimum(arg1, arg2)
+
+
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+    temp_learning_rate_schedule = CustomSchedule(128)
+    plt.plot(temp_learning_rate_schedule(tf.range(400, dtype=tf.float32)))
+    plt.ylabel("Learning Rate")
+    plt.xlabel("Train Step")
+    plt.show()

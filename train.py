@@ -5,7 +5,7 @@ import tensorflow as tf
 from tqdm import tqdm
 from data import DatasetLoader
 from argparse import ArgumentParser
-from constant import MaskedSoftmaxCELoss, Bleu_score
+from constant import MaskedSoftmaxCELoss, Bleu_score, CustomSchedule
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from model.tests.model import Seq2SeqEncode, Seq2SeqDecode, BahdanauSeq2SeqDecode, LuongSeq2SeqDecoder
 
@@ -40,8 +40,13 @@ class SequenceToSequence:
         self.EPOCHS = epochs
         self.mode_training = train_mode
         self.attention_mode = attention_mode
-        self.save_encoder = save_model + "/encoder.h5"
-        self.save_decoder = save_model + "/decoder.h5"
+
+        path_save = os.getcwd() + "/" + save_model
+        if not os.path.exists(path_save):
+            os.mkdir(path_save)
+
+        self.save_encoder = path_save + "/encoder.h5"
+        self.save_decoder = path_save + "/decoder.h5"
         self.debug = debug
 
         # Load dataset
@@ -50,7 +55,8 @@ class SequenceToSequence:
                                                                                        self.min_sentence,
                                                                                        self.max_sentence).build_dataset()
         # Initialize optimizer
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate)
+        learning_rate = CustomSchedule(self.hidden_units)
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
 
         # Initialize loss function
         self.loss = MaskedSoftmaxCELoss()
@@ -145,7 +151,7 @@ class SequenceToSequence:
         test_ds_len = int(len(test_ds) * self.test_split_size)
         count = 0
         for test_, test_y in test_ds.shuffle(buffer_size=1, seed=1).take(test_ds_len):
-            test_x = np.expand_dims(test_.numpy(), axis=0)
+            test_x = tf.expand_dims(test_, axis=0)
             first_state = self.encoder.init_hidden_state(batch_size=1)
             _, last_state = self.encoder(test_x, first_state, training=False)
 
@@ -178,7 +184,7 @@ class SequenceToSequence:
         test_ds_len = int(len(test_ds) * self.test_split_size)
         count = 0
         for test_, test_y in test_ds.shuffle(buffer_size=1, seed=1).take(test_ds_len):
-            test_x = np.expand_dims(test_.numpy(), axis=0)
+            test_x = tf.expand_dims(test_, axis=0)
             first_state = self.encoder.init_hidden_state(batch_size=1)
             encode_outs, last_state = self.encoder(test_x, first_state, training=False)
 
@@ -186,9 +192,9 @@ class SequenceToSequence:
             sentence = []
             for _ in range(len(test_y)):
                 output, last_state = self.decoder_attention(input_decode, encode_outs, last_state, training=False)
-                output = tf.argmax(output, axis=1).numpy()
-                input_decode = output
-                sentence.append(output[0])
+                pred_id = tf.argmax(output, axis=1).numpy()
+                input_decode = pred_id
+                sentence.append(pred_id[0])
 
             score += self.bleu(self.tar_lang.vector_to_sentence(sentence),
                                self.tar_lang.vector_to_sentence(test_y.numpy()))
@@ -241,7 +247,7 @@ if __name__ == "__main__":
     parser.add_argument("--test-split-size", default=0.01, type=float)
     parser.add_argument("--train-mode", default="not_attention", type=str)
     parser.add_argument("--attention-mode", default="luong", type=str)
-    parser.add_argument("--save-model", default=None, type=str)
+    parser.add_argument("--save-model", default="", type=str)
     parser.add_argument("--debug", default=False, type=bool)
 
     home_dir = os.getcwd()
@@ -275,4 +281,4 @@ if __name__ == "__main__":
                        save_model=args.save_model,
                        debug=args.debug).run()
 
-    # python train.py --inp-lang="dataset/train.en.txt" --tar-lang="dataset/train.vi.txt" --hidden-units=256 --embedding-size=128 --epochs=200 --test-split-size=0.01 --train-mode="attention" --debug=True
+    # python train.py --inp-lang="dataset/train.en.txt" --tar-lang="dataset/train.vi.txt" --hidden-units=256 --embedding-size=128 --epochs=200 --test-split-size=0.01 --train-mode="attention" --save-mode="./save" --debug=True
