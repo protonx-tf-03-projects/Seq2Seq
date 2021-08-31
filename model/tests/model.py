@@ -54,8 +54,6 @@ class Decode(tf.keras.Model):
 
         self.embedding = Embedding(vocab_size, embedding_size)
         self.decode_layer_1 = LSTM(hidden_units,
-                                   recurrent_dropout=0.2,
-                                   dropout=0.2,
                                    return_sequences=True,
                                    return_state=True,
                                    kernel_initializer="glorot_uniform")

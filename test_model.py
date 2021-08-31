@@ -2,7 +2,6 @@ import numpy as np
 from data import DatasetLoader
 from model.tests.model import SequenceToSequence
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from sklearn.model_selection import train_test_split
 import tensorflow as tf
 
 
@@ -39,8 +38,8 @@ if __name__ == '__main__':
 
     train_ds = tf.data.Dataset.from_tensor_slices((padded_sequences_vi, padded_sequences_en))
 
-    embedding_size = 32
-    hidden_unit = 64
+    embedding_size = 64
+    hidden_unit = 256
     BATCH_SIZE = 1
 
     model = SequenceToSequence(inp_lang.vocab_size,

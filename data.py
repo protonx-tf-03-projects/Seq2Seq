@@ -124,7 +124,7 @@ class DatasetLoader:
 
         return inp_vector, tar_vector, inp_lang, tar_lang
 
-    def remove_punctuation_digits(self, sen, tar_get=True):
+    def remove_punctuation_digits(self, sen):
         """
         :input: sen: str
 
@@ -156,7 +156,7 @@ class DatasetLoader:
         sentences_1 = []
         sentences_2 = []
         for sen_1, sen_2 in zip(raw_origin_language, raw_target_language):
-            sen_1 = self.remove_punctuation_digits(sen_1, tar_get=False)
+            sen_1 = self.remove_punctuation_digits(sen_1)
             sen_2 = self.remove_punctuation_digits(sen_2)
             if self.min_length <= len(sen_1.split(" ")) <= self.max_length \
                     and self.min_length <= len(sen_2.split(" ")) <= self.max_length:

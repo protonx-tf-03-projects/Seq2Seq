@@ -172,3 +172,14 @@ def evaluation_with_attention(model,
             print("Target   : ", tar_builder.vector_to_sentence(test_y.numpy()))
             count += 1
     return score / test_ds_len
+
+
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+
+    temp_learning_rate_schedule = CustomSchedule(64, 100)
+
+    plt.plot(temp_learning_rate_schedule(tf.range(1000, dtype=tf.float32)))
+    plt.ylabel("Learning Rate")
+    plt.xlabel("Train Step")
+    plt.show()
