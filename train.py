@@ -26,6 +26,7 @@ class Seq2Seq:
                  train_mode="attention",
                  attention_mode="luong",  # Bahdanau
                  use_lr_schedule=False,
+                 retrain=False,
                  debug=False):
         self.inp_lang_path = inp_lang_path
         self.tar_lang_path = tar_lang_path
@@ -66,12 +67,21 @@ class Seq2Seq:
         self.bleu = Bleu_score()
 
         # Initialize Seq2Seq model
-        self.model = SequenceToSequence(self.inp_builder.vocab_size,
-                                        self.tar_builder.vocab_size,
-                                        self.embedding_size,
-                                        self.hidden_units,
-                                        self.train_mode,
-                                        self.attention_mode)
+        if retrain and os.listdir(self.save_model) != []:
+            self.model = SequenceToSequence(self.inp_builder.vocab_size,
+                                            self.tar_builder.vocab_size,
+                                            self.embedding_size,
+                                            self.hidden_units,
+                                            self.train_mode,
+                                            self.attention_mode)
+            self.model.load_weights(self.save_model)
+        else:
+            self.model = SequenceToSequence(self.inp_builder.vocab_size,
+                                            self.tar_builder.vocab_size,
+                                            self.embedding_size,
+                                            self.hidden_units,
+                                            self.train_mode,
+                                            self.attention_mode)
 
     def training(self, train_ds, N_BATCH):
         tmp = 0
@@ -178,6 +188,7 @@ if __name__ == "__main__":
     parser.add_argument("--train-mode", default="not_attention", type=str)
     parser.add_argument("--attention-mode", default="luong", type=str)
     parser.add_argument("--use-lr-schedule", default=False, type=bool)
+    parser.add_argument("--retrain", default=False, type=bool)
     parser.add_argument("--debug", default=False, type=bool)
 
     args = parser.parse_args()
@@ -211,6 +222,7 @@ if __name__ == "__main__":
             train_mode=args.train_mode,
             attention_mode=args.attention_mode,
             use_lr_schedule=args.use_lr_schedule,
+            retrain=args.retrain,
             debug=args.debug).run()
 
     # python train.py --inp-lang="dataset/train.en.txt" --tar-lang="dataset/train.vi.txt" --hidden-units=256 --embedding-size=128 --epochs=200 --test-split-size=0.01 --train-mode="attention" --debug=True
