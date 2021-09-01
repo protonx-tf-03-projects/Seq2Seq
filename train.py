@@ -186,7 +186,7 @@ if __name__ == "__main__":
     # Project Description
 
     print('---------------------Welcome to Hợp tác xã kiên trì-------------------')
-    print('Github: Xunino')
+    print('Github: https://github.com/Xunino')
     print('Email: ndlinh.ai@gmail.com')
     print('------------------------------------------------------------------------')
     print(f'Training Sequences To Sequences model with hyper-params:')

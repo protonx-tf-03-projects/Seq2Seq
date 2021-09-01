@@ -79,25 +79,48 @@ class PredictionSentence:
 
 
 if __name__ == "__main__":
-    text = "But now , we have a real technology to do this ."
-    PredictionSentence("dataset/train.en.txt", "dataset/train.vi.txt").predict(text)
+    parser = ArgumentParser()
+    parser.add_argument("--test-path", required=True, type=str)
+    parser.add_argument("--inp-lang-path", required=True, type=str)
+    parser.add_argument("--tar-lang-path", required=True, type=str)
+    parser.add_argument("--embedding-size", default=64, type=str)
+    parser.add_argument("--hidden-units", default=256, type=str)
+    parser.add_argument("--min-sentence", default=10, type=str)
+    parser.add_argument("--max-sentence", default=14, type=str)
+    parser.add_argument("--attention-mode", default="not_attention", type=str)
+    parser.add_argument("--train-mode", default="luong", type=str)
 
-    # parser = ArgumentParser()
-    # parser.add_argument("--batch-size", default=64, type=int)
-    # parser.add_argument("--epochs", default=1000, type=int)
-    #
-    # # FIXME
-    # args = parser.parse_args()
-    #
-    # # FIXME
-    # # Project Description
-    #
-    # print('---------------------Welcome to ${name}-------------------')
-    # print('Github: ${accout}')
-    # print('Email: ${email}')
-    # print('---------------------------------------------------------------------')
-    # print('Training ${name} model with hyper-params:')  # FIXME
-    # print('===========================')
-    #
-    # # FIXME
-    # # Do Training
+    args = parser.parse_args()
+
+    print('---------------------Welcome to Hợp tác xã Kiên trì-------------------')
+    print('Github: https://github.com/Xunino')
+    print('Email: ndlinh.ai@gmail.com')
+    print('---------------------------------------------------------------------')
+    print('Predicting Sequence To Sequence model with hyper-params:')
+    print('------------------------------------')
+    for k, v in vars(args).items():
+        print(f"|  +) {k} = {v}")
+    print('====================================')
+
+    # FIXME
+    # Do Predict
+    define = PredictionSentence(inp_lang_path=args.inp_lang_path,
+                                tar_lang_path=args.tar_lang_path,
+                                hidden_units=args.hidden_units,
+                                embedding_size=args.embedding_size,
+                                min_sentence=args.min_sentence,
+                                max_sentence=args.max_sentence,
+                                train_mode=args.train_mode,
+                                attention_mode=args.attention_mode)
+    with open(args.test_path, "r", encoding="utf-8") as f:
+        for line in f.readlines():
+            if args.attention_mode.lower() == "not_attention":
+                print(line)
+                define.predict(line)
+            elif args.attention_mode.lower() == "attention":
+                print(line)
+                define.predict_with_attention(line)
+            else:
+                print(EOFError)
+
+    # python predict.py --test-path="dataset/train.en.txt" --inp-lang-path="dataset/train.en.txt" --tar-lang-path="dataset/train.vi.txt"
