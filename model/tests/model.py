@@ -124,8 +124,6 @@ class BahdanauDecode(tf.keras.Model):
 
         self.embedding = Embedding(vocab_size, embedding_size)
         self.decode_layer_1 = LSTM(hidden_units,
-                                   recurrent_dropout=0.2,
-                                   dropout=0.2,
                                    return_sequences=True,
                                    return_state=True,
                                    kernel_initializer="glorot_uniform")
@@ -167,8 +165,6 @@ class LuongDecoder(tf.keras.Model):
         super(LuongDecoder, self).__init__(**kwargs)
         self.embedding = Embedding(vocab_size, embedding_size)
         self.decode_layer_1 = LSTM(hidden_units,
-                                   recurrent_dropout=0.2,
-                                   dropout=0.2,
                                    return_sequences=True,
                                    return_state=True,
                                    kernel_initializer="glorot_uniform")
