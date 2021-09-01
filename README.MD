@@ -74,10 +74,22 @@ There are some important arguments for the script you should consider when runni
 
 ## IV. Predict Process
 
+- Not use attention
+
 ```bash
 python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_input_data} \
                   --tar-lang-path=${link_to_target_data} --hidden-units=64 \
-                  --embedding-size=32 --min-sentence=10 --max-sentence=14
+                  --embedding-size=32 --min-sentence=10 --max-sentence=14 \
+                  --train-mode="not_attention"
+```
+
+- Use attention
+
+```bash
+python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_input_data} \
+                  --tar-lang-path=${link_to_target_data} --hidden-units=64 \
+                  --embedding-size=32 --min-sentence=10 --max-sentence=14 \
+                  --attention-mode="luong" --train-mode="attention"
 ```
 
 ## V. Result and Comparision

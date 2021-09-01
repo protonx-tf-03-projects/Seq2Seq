@@ -87,8 +87,8 @@ if __name__ == "__main__":
     parser.add_argument("--hidden-units", default=256, type=str)
     parser.add_argument("--min-sentence", default=10, type=str)
     parser.add_argument("--max-sentence", default=14, type=str)
-    parser.add_argument("--attention-mode", default="not_attention", type=str)
-    parser.add_argument("--train-mode", default="luong", type=str)
+    parser.add_argument("--attention-mode", default="luong", type=str)
+    parser.add_argument("--train-mode", default="not_attention", type=str)
 
     args = parser.parse_args()
 
