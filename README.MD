@@ -96,14 +96,14 @@ python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_inp
 
 - Your implementation using Encode-Decode:
 ```
-100% 116/116 [00:05<00:00, 21.13it/s]
+100% 116/116 [00:02<00:00, 44.00it/s]
 -----------------------------------------------------------------
 Input    :  <sos> they wrote almost a thousand pages on the topic <eos>
-Predicted:  <sos> họ viết gần 1000 trang về chủ đề này <eos> <eos> <eos> <eos>
+Predicted:  <sos> họ viết gần 1000 trang về của tranh của mình <eos> <eos> <eos>
 Target   :  <sos> họ viết gần 1000 trang về chủ đề này <eos>
 -----------------------------------------------------------------
 Input    :  <sos> we blow it up and look at the pieces <eos>
-Predicted:  <sos> chúng tôi cho nó nổ và xem xét từng còn nhỏ <eos> <eos>
+Predicted:  <sos> chúng tôi cho nó nổ và xem xét từng mảnh nhỏ <eos> <eos>
 Target   :  <sos> chúng tôi cho nó nổ và xem xét từng mảnh nhỏ <eos>
 -----------------------------------------------------------------
 Input    :  <sos> this is the euphore smog chamber in spain <eos>
@@ -111,14 +111,18 @@ Predicted:  <sos> đây là phòng nghiên cứu khói bụi euphore ở tây ba
 Target   :  <sos> đây là phòng nghiên cứu khói bụi euphore ở tây ban nha <eos>
 -----------------------------------------------------------------
 Input    :  <sos> we also fly all over the world looking for this thing <eos>
-Predicted:  <sos> chúng tôi còn bay khắp thế giới động vật dối <eos> chị bé
+Predicted:  <sos> chúng tôi còn bay khắp thế giới để tìm hiểu 50 tiết kiệm
 Target   :  <sos> chúng tôi còn bay khắp thế giới để tìm phân tử này <eos>
 -----------------------------------------------------------------
 Input    :  <sos> this is the tower in the middle of the rainforest from above <eos>
-Predicted:  <sos> đây chính là cái tháp giữa rừng sâu các y hàng <eos> <eos>
+Predicted:  <sos> đây chính là cái tháp giữa rừng sâu nhiều với 100 quốc <eos>
 Target   :  <sos> đây chính là cái tháp giữa rừng sâu nhìn từ trên cao <eos>
+-----------------------------------------------------------------
+Input    :  <sos> christopher decharms a look inside the brain in real time <eos>
+Predicted:  <sos> christopher decharms quét não bộ theo thời gian thực <eos> <eos> <eos> <eos>
+Target   :  <sos> christopher decharms quét não bộ theo thời gian thực <eos>
 =================================================================
-Epoch 177 -- Loss: 39.446617126464844 -- Bleu_score: 0.5644560218884062
+Epoch 376 -- Loss: 30.585018157958984 -- Bleu_score: 0.6258203949505547
 =================================================================
 ```
 

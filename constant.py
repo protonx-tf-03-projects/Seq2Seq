@@ -97,7 +97,8 @@ class CustomSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
         return tf.math.rsqrt(self.hidden_units) * tf.math.minimum(arg1, arg2)
 
 
-def evaluation(model,
+def evaluation(encoder,
+               decoder,
                test_ds,
                val_function,
                inp_builder,
@@ -115,12 +116,12 @@ def evaluation(model,
     test_ds_len = int(len(test_ds) * test_split_size)
     for test_, test_y in test_ds.shuffle(buffer_size=1, seed=1).take(test_ds_len):
         test_x = tf.expand_dims(test_, axis=0)
-        _, last_state = model.encoder(test_x)
+        _, last_state = encoder(test_x)
 
         input_decode = tf.reshape(tf.constant([tar_builder.word_index['<sos>']]), shape=(-1, 1))
         sentence = []
         for _ in range(len(test_y)):
-            output, last_state = model.decoder(input_decode, last_state, training=False)
+            output, last_state = decoder(input_decode, last_state, training=False)
             output = tf.argmax(output, axis=2).numpy()
             input_decode = output
             sentence.append(output[0][0])
@@ -139,7 +140,8 @@ def evaluation(model,
     return score / test_ds_len
 
 
-def evaluation_with_attention(model,
+def evaluation_with_attention(encoder,
+                              decoder,
                               test_ds,
                               val_function,
                               inp_builder,
@@ -157,11 +159,11 @@ def evaluation_with_attention(model,
     test_ds_len = int(len(test_ds) * test_split_size)
     for test_, test_y in test_ds.shuffle(buffer_size=1, seed=1).take(test_ds_len):
         test_x = tf.expand_dims(test_, axis=0)
-        encode_outs, last_state = model.encoder(test_x)
+        encode_outs, last_state = encoder(test_x)
         input_decode = tf.constant([tar_builder.word_index['<sos>']])
         sentence = []
         for _ in range(len(test_y)):
-            output, last_state = model.decoder(input_decode, encode_outs, last_state, training=False)
+            output, last_state = decoder(input_decode, encode_outs, last_state, training=False)
             pred_id = tf.argmax(output, axis=1).numpy()
             input_decode = pred_id
             sentence.append(pred_id[0])

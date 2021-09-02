@@ -1,10 +1,83 @@
 import os
+
+import numpy as np
 import tensorflow as tf
 
 from argparse import ArgumentParser
 from model.tests.model import SequenceToSequence
-
+from tensorflow.keras.preprocessing.sequence import pad_sequences
 from data import DatasetLoader
+
+
+class Translate(tf.Module):
+    def __init__(self,
+                 inp_lang_path,
+                 tar_lang_path,
+                 encoder,
+                 decoder,
+                 tar_builder,
+                 min_length=10,
+                 max_length=14):
+        super(Translate, self).__init__()
+
+        self.encoder = encoder
+        self.decoder = decoder
+        self.tar_builder = tar_builder
+        self.max_length = max_length
+
+        self.loader = DatasetLoader(inp_lang_path,
+                                    tar_lang_path,
+                                    min_length,
+                                    max_length)
+        _, _, self.inp_builder, self.tar_builder = self.loader.build_dataset()
+
+    def preprocess_text(self, input_text):
+        input_text = [self.loader.remove_punctuation(input_text).split()]
+        vector = self.inp_builder.sequences_to_texts(input_text)
+        vector = pad_sequences(vector,
+                               maxlen=self.max_sentence,
+                               padding="post",
+                               truncating="post")
+        return vector
+
+    def translate(self, input_text):
+        vector = self.preprocess_text(input_text)
+        # Encoder
+        _, last_state = self.encoder(vector)
+        # Process decoder input
+        input_decode = tf.reshape(tf.constant([self.tar_builder.word_index['<sos>']]), shape=(-1, 1))
+        pred_sentence = ""
+        for _ in range(self.max_length):
+            output, last_state = self.decoder(input_decode, last_state)
+            pred_id = tf.argmax(output, axis=2).numpy()
+            input_decode = pred_id
+            pred_sentence += " " + self.tar_builder.index_word[pred_id[0][0]]
+        text = [w for w in pred_sentence.split() if w not in ["<sos>", "<eos>"]]
+        return text
+
+    def translate_with_attention(self, input_text):
+        vector = self.preprocess_text(input_text)
+        test_x = tf.expand_dims(vector, axis=0)
+        # Encoder
+        encode_outs, last_state = self.model.encoder(test_x)
+        # Process decoder input
+        input_decode = tf.constant([self.tar_builder.word_index['<sos>']])
+        pred_sentence = ""
+        for _ in range(self.max_sentence):
+            output, last_state = self.model.decoder(input_decode, encode_outs, last_state)
+            pred_id = tf.argmax(output, axis=1).numpy()
+            input_decode = pred_id
+            pred_sentence += " " + self.tar_builder.index_word[pred_id[0]]
+        text = [w for w in pred_sentence.split() if w not in ["<sos>", "<eos>"]]
+        return text
+
+    @tf.function(input_signature=[tf.TensorSpec(dtype=tf.string, shape=[None])])
+    def translate_default(self, input_text):
+        return self.translate(input_text)
+
+    @tf.function(input_signature=[tf.TensorSpec(dtype=tf.string, shape=[None])])
+    def translate_with_attention(self, input_text):
+        return self.translate(input_text)
 
 
 class PredictionSentence:
@@ -23,16 +96,23 @@ class PredictionSentence:
                                       tar_lang_path,
                                       min_sentence,
                                       max_sentence)
-
+        self.max_sentence = max_sentence
         self.inp_tensor, self.tar_tensor, self.inp_builder, self.tar_builder = self.dataload.build_dataset()
 
-        self.model = SequenceToSequence(self.inp_builder.vocab_size,
-                                        self.tar_builder.vocab_size,
+        inp_vocab_size = len(self.inp_builder.index_word) + 1
+        tar_vocab_size = len(self.tar_builder.index_word) + 1
+
+        self.model = SequenceToSequence(inp_vocab_size,
+                                        tar_vocab_size,
                                         embedding_size,
                                         hidden_units,
                                         train_mode,
                                         attention_mode)
-        self.model.load_weights(self.weights_path)
+        latest = tf.train.latest_checkpoint(self.weights_path)
+        self.encode_inp = tf.compat.v1.placeholder(tf.int32, (None, None))
+        self.decode_inp = tf.compat.v1.placeholder(tf.int32, (None, None))
+        self.model(self.encode_inp, self.decode_inp)
+        self.model.load_weights(latest)
 
     def predict(self, sentence):
         """
@@ -40,21 +120,26 @@ class PredictionSentence:
         :param (inp_lang, tar_lang)
         :return:
         """
-        sentence = self.dataload.remove_punctuation_digits(sentence)
-        vector = self.inp_builder.sentence_to_vector(sentence)
-        test_x = tf.expand_dims(vector, axis=0)
-        _, last_state = self.model.encoder(test_x)
+        sentence = self.dataload.remove_punctuation(sentence)
+        if args.min_sentence < len(sentence.split()) < args.max_sentence:
+            vector = self.inp_builder.sequences_to_texts([sentence.split()])
+            test_x = pad_sequences(vector,
+                                   maxlen=self.max_sentence,
+                                   padding="post",
+                                   truncating="post")
+            _, last_state = self.model.encoder(test_x)
 
-        input_decode = tf.reshape(tf.constant([self.tar_builder.word2id['<sos>']]), shape=(-1, 1))
-        sentence = []
-        for _ in range(self.tar_builder.max_len):
-            output, last_state = self.model.decoder(input_decode, last_state)
-            output = tf.argmax(output, axis=2).numpy()
-            input_decode = output
-            sentence.append(output[0][0])
-        print("-----------------------------------------------------------------")
-        print("Predicted: ", self.tar_builder.vector_to_sentence(sentence))
-        print("-----------------------------------------------------------------")
+            input_decode = tf.reshape(tf.constant([self.tar_builder.word_index['<sos>']]), shape=(-1, 1))
+            pred_sentence = ""
+            for _ in range(self.max_sentence):
+                output, last_state = self.model.decoder(input_decode, last_state)
+                pred_id = tf.argmax(output, axis=2).numpy()
+                input_decode = pred_id
+                pred_sentence += " " + self.tar_builder.index_word[pred_id[0][0]]
+            print("-----------------------------------------------------------------")
+            print("Input:   ", sentence)
+            print("Predicted: ", pred_sentence)
+            print("-----------------------------------------------------------------")
 
     def predict_with_attention(self, sentence):
         """
@@ -62,20 +147,23 @@ class PredictionSentence:
         :param (inp_lang, tar_lang)
         :return:
         """
-        sentence = self.dataload.remove_punctuation_digits(sentence)
-        vector = self.inp_builder.sentence_to_vector(sentence)
-        test_x = tf.expand_dims(vector, axis=0)
-        encode_outs, last_state = self.model.encoder(test_x)
-        input_decode = tf.constant([self.tar_builder.word2id['<sos>']])
-        sentence = []
-        for _ in range(self.tar_builder.max_len):
-            output, last_state = self.model.decoder(input_decode, encode_outs, last_state)
-            pred_id = tf.argmax(output, axis=1).numpy()
-            input_decode = pred_id
-            sentence.append(pred_id[0])
-        print("-----------------------------------------------------------------")
-        print("Predicted: ", self.tar_builder.vector_to_sentence(sentence))
-        print("-----------------------------------------------------------------")
+        sentence = self.dataload.remove_punctuation(sentence)
+        if args.min_sentence < len(sentence.split()) < args.max_sentence:
+
+            vector = self.inp_builder.sequences_to_texts(sentence)
+            test_x = tf.expand_dims(vector, axis=0)
+            encode_outs, last_state = self.model.encoder(test_x)
+            input_decode = tf.constant([self.tar_builder.word_index['<sos>']])
+            vector = []
+            for _ in range(self.max_sentence):
+                output, last_state = self.model.decoder(input_decode, encode_outs, last_state)
+                pred_id = tf.argmax(output, axis=1).numpy()
+                input_decode = pred_id
+                vector.append(pred_id[0])
+            print("-----------------------------------------------------------------")
+            print("Input:   ", sentence)
+            print("Predicted: ", self.tar_builder.vector_to_sentence(vector))
+            print("-----------------------------------------------------------------")
 
 
 if __name__ == "__main__":
@@ -84,7 +172,7 @@ if __name__ == "__main__":
     parser.add_argument("--inp-lang-path", required=True, type=str)
     parser.add_argument("--tar-lang-path", required=True, type=str)
     parser.add_argument("--embedding-size", default=64, type=str)
-    parser.add_argument("--hidden-units", default=256, type=str)
+    parser.add_argument("--hidden-units", default=128, type=str)
     parser.add_argument("--min-sentence", default=10, type=str)
     parser.add_argument("--max-sentence", default=14, type=str)
     parser.add_argument("--attention-mode", default="luong", type=str)
@@ -114,13 +202,9 @@ if __name__ == "__main__":
                                 attention_mode=args.attention_mode)
     with open(args.test_path, "r", encoding="utf-8") as f:
         for line in f.readlines():
-            if args.attention_mode.lower() == "not_attention":
-                print(line)
-                define.predict(line)
-            elif args.attention_mode.lower() == "attention":
-                print(line)
+            if args.attention_mode.lower() == "attention":
                 define.predict_with_attention(line)
             else:
-                print(EOFError)
+                define.predict(line)
 
     # python predict.py --test-path="dataset/train.en.txt" --inp-lang-path="dataset/train.en.txt" --tar-lang-path="dataset/train.vi.txt"

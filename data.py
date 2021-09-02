@@ -84,7 +84,7 @@ class DatasetLoader:
 
         return inp_vector, tar_vector, self.tokenize_inp, self.tokenize_tar
 
-    def remove_punctuation_digits(self, sen):
+    def remove_punctuation(self, sen):
         """
         :input: sen: str
 
@@ -116,8 +116,8 @@ class DatasetLoader:
         sentences_1 = []
         sentences_2 = []
         for sen_1, sen_2 in zip(raw_origin_language, raw_target_language):
-            sen_1 = self.remove_punctuation_digits(sen_1)
-            sen_2 = self.remove_punctuation_digits(sen_2)
+            sen_1 = self.remove_punctuation(sen_1)
+            sen_2 = self.remove_punctuation(sen_2)
             if self.min_length <= len(sen_1.split(" ")) <= self.max_length \
                     and self.min_length <= len(sen_2.split()) <= self.max_length:
                 sentences_1.append(sen_1)
@@ -130,4 +130,3 @@ if __name__ == '__main__':
     data = DatasetLoader("dataset/train.en.txt", "dataset/train.vi.txt")
     # data.build_dataset(False)
     processed_original_language, processed_target_language, inp_builder, tar_builder = data.build_dataset(False)
-    print(inp_builder.sequences_to_texts([[1, 4, 3, 1, 5, 7]])[0])

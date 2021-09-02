@@ -7,7 +7,8 @@ from data import DatasetLoader
 from argparse import ArgumentParser
 from constant import MaskedSoftmaxCELoss, Bleu_score, CustomSchedule, evaluation, evaluation_with_attention
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from model.tests.model import SequenceToSequence
+from model.tests.model import LuongDecoder, BahdanauDecode, Decode, Encode
+from predict import Translate
 
 
 class Seq2Seq:
@@ -71,22 +72,36 @@ class Seq2Seq:
         # Initialize Seq2Seq model
         self.input_vocab_size = len(self.inp_builder.word_index) + 1
         self.target_vocab_size = len(self.tar_builder.word_index) + 1
-        if retrain and os.listdir(self.path_save) != []:
-            print("[INFO] Start retrain...")
-            self.model = SequenceToSequence(self.input_vocab_size,
-                                            self.target_vocab_size,
-                                            self.embedding_size,
-                                            self.hidden_units,
-                                            self.train_mode,
-                                            self.attention_mode)
-            self.model.load_weights(self.path_save)
+
+        # Initialize encoder
+        self.encoder = Encode(self.input_vocab_size,
+                              embedding_size,
+                              hidden_units)
+
+        # Initialize decoder with attention
+        if self.train_mode.lower() == "attention":
+            if attention_mode.lower() == "luong":
+                self.decoder = LuongDecoder(self.target_vocab_size,
+                                            embedding_size,
+                                            hidden_units)
+            else:
+                self.decoder = BahdanauDecode(self.target_vocab_size,
+                                              embedding_size,
+                                              hidden_units)
         else:
-            self.model = SequenceToSequence(self.input_vocab_size,
-                                            self.target_vocab_size,
-                                            self.embedding_size,
-                                            self.hidden_units,
-                                            self.train_mode,
-                                            self.attention_mode)
+            # Initialize decoder
+            self.decoder = Decode(self.target_vocab_size,
+                                  embedding_size,
+                                  hidden_units)
+
+        # Initialize translation
+        self.translator = Translate(self.inp_lang_path,
+                                    self.tar_lang_path,
+                                    self.encoder,
+                                    self.decoder,
+                                    self.tar_builder,
+                                    self.min_sentence,
+                                    self.max_sentence)
 
     def training(self, train_ds, N_BATCH):
         tmp = 0
@@ -94,19 +109,25 @@ class Seq2Seq:
             loss = 0
             for _, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
                 with tf.GradientTape() as tape:
+                    # Teacher forcing
                     sos = tf.reshape(tf.constant([self.tar_builder.word_index['<sos>']] * self.BATCH_SIZE),
                                      shape=(-1, 1))
-                    dec_input = tf.concat([sos, y[:, :-1]], 1)  # Teacher forcing
-                    outs = self.model(x, dec_input)
+                    dec_input = tf.concat([sos, y[:, :-1]], 1)
+                    # Encoder
+                    _, last_state = self.encoder(x)
+                    # Decoder
+                    outs = self.decoder(dec_input, last_state)
+                    # Loss
                     loss += self.loss(y, outs)
 
-                train_vars = self.model.trainable_variables
+                train_vars = self.encoder.trainable_variables + self.decoder.trainable_variables
                 grads = tape.gradient(loss, train_vars)
                 self.optimizer.apply_gradients(zip(grads, train_vars))
 
             if self.use_bleu:
                 print("\n=================================================================")
-                bleu_score = evaluation(model=self.model,
+                bleu_score = evaluation(encoder=self.encoder,
+                                        decoder=self.decoder,
                                         test_ds=train_ds,
                                         val_function=self.bleu,
                                         inp_builder=self.inp_builder,
@@ -116,7 +137,8 @@ class Seq2Seq:
                 print("-----------------------------------------------------------------")
                 print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
                 if bleu_score > tmp:
-                    self.model.save_weights(self.save_checkpoint)
+                    tf.saved_model.save(self.translator, "translate",
+                                        signatures={'serving_default': self.translator.translate_default})
                     print("[INFO] Saved model in '{}' direction!".format(self.path_save))
                     tmp = bleu_score
                 print("=================================================================\n")
@@ -124,7 +146,8 @@ class Seq2Seq:
                 print("=================================================================")
                 print(f'Epoch {epoch + 1} -- Loss: {loss}')
                 print("=================================================================\n")
-        self.model.save_weights(self.save_checkpoint)
+        tf.saved_model.save(self.translator, "translate",
+                            signatures={'serving_default': self.translator.translate_default})
 
     def training_with_attention(self, train_ds, N_BATCH):
         tmp = 0
@@ -133,20 +156,27 @@ class Seq2Seq:
             for batch_size, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
                 loss = 0
                 with tf.GradientTape() as tape:
+                    # Teaching force
                     dec_input = tf.constant([self.tar_builder.word_index['<sos>']] * self.BATCH_SIZE)
+                    # Encoder
+                    encoder_outs, last_state = self.encoder(x)
                     for i in range(1, y.shape[1]):
-                        decode_out = self.model(x, dec_input)
+                        # Decoder
+                        decode_out = self.decoder(dec_input, last_state)
+                        # Loss
                         loss += self.loss(y[:, i], decode_out)
+                        # Decoder input
                         dec_input = y[:, i]
 
-                train_vars = self.model.trainable_variables
+                train_vars = self.encoder.trainable_variables + self.decoder.trainable_variables
                 grads = tape.gradient(loss, train_vars)
                 self.optimizer.apply_gradients(zip(grads, train_vars))
                 total_loss += loss
 
             if self.use_bleu:
                 print("\n=================================================================")
-                bleu_score = evaluation_with_attention(model=self.model,
+                bleu_score = evaluation_with_attention(encoder=self.encoder,
+                                                       decoder=self.decoder,
                                                        test_ds=train_ds,
                                                        val_function=self.bleu,
                                                        inp_builder=self.inp_builder,
@@ -156,7 +186,8 @@ class Seq2Seq:
                 print("-----------------------------------------------------------------")
                 print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {bleu_score}')
                 if bleu_score > tmp:
-                    self.model.save_weights(self.save_checkpoint)
+                    tf.saved_model.save(self.translator, "translate",
+                                        signatures={'serving_default': self.translator.translate_with_attention})
                     print("[INFO] Saved model in '{}' direction!".format(self.path_save))
                     tmp = bleu_score
                 print("=================================================================\n")
@@ -164,8 +195,8 @@ class Seq2Seq:
                 print("=================================================================")
                 print(f'Epoch {epoch + 1} -- Loss: {total_loss}')
                 print("=================================================================\n")
-
-        self.model.save_weights(self.save_checkpoint)
+        tf.saved_model.save(self.translator, "translate",
+                            signatures={'serving_default': self.translator.translate_with_attention})
 
     def run(self):
         # Padding in sequences
