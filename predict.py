@@ -2,11 +2,27 @@ import os
 
 import numpy as np
 import tensorflow as tf
-
+import tensorflow_text as tf_text
 from argparse import ArgumentParser
 from model.tests.model import SequenceToSequence
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.layers.experimental import preprocessing
 from data import DatasetLoader
+
+
+def tf_lower_and_split_punct(text):
+    # Split accecented characters.
+    text = tf_text.normalize_utf8(text, 'NFKD')
+    text = tf.strings.lower(text)
+    # Keep space, a to z, and select punctuation.
+    text = tf.strings.regex_replace(text, '[^ a-z.?!,¿]', '')
+    # Add spaces around punctuation.
+    text = tf.strings.regex_replace(text, '[.?!,¿]', r' \0 ')
+    # Strip whitespace.
+    text = tf.strings.strip(text)
+
+    text = tf.strings.join(['<sos>', text, '<eos>'], separator=' ')
+    return text
 
 
 class Translate(tf.Module):
@@ -31,17 +47,12 @@ class Translate(tf.Module):
                                     max_length)
         _, _, self.inp_builder, self.tar_builder = self.loader.build_dataset()
 
-    def preprocess_text(self, input_text):
-        input_text = [self.loader.remove_punctuation(input_text).split()]
-        vector = self.inp_builder.sequences_to_texts(input_text)
-        vector = pad_sequences(vector,
-                               maxlen=self.max_sentence,
-                               padding="post",
-                               truncating="post")
-        return vector
+        self.input_text_processor = preprocessing.TextVectorization(
+            standardize=tf_lower_and_split_punct,
+            max_tokens=max_length)
 
     def translate(self, input_text):
-        vector = self.preprocess_text(input_text)
+        vector = self.input_text_processor(input_text)
         # Encoder
         _, last_state = self.encoder(vector)
         # Process decoder input
@@ -56,7 +67,7 @@ class Translate(tf.Module):
         return text
 
     def translate_with_attention(self, input_text):
-        vector = self.preprocess_text(input_text)
+        vector = self.input_text_processor(input_text)
         test_x = tf.expand_dims(vector, axis=0)
         # Encoder
         encode_outs, last_state = self.model.encoder(test_x)
@@ -70,14 +81,6 @@ class Translate(tf.Module):
             pred_sentence += " " + self.tar_builder.index_word[pred_id[0]]
         text = [w for w in pred_sentence.split() if w not in ["<sos>", "<eos>"]]
         return text
-
-    @tf.function(input_signature=[tf.TensorSpec(dtype=tf.string, shape=[None])])
-    def translate_default(self, input_text):
-        return self.translate(input_text)
-
-    @tf.function(input_signature=[tf.TensorSpec(dtype=tf.string, shape=[None])])
-    def translate_with_attention(self, input_text):
-        return self.translate(input_text)
 
 
 class PredictionSentence:
@@ -109,9 +112,7 @@ class PredictionSentence:
                                         train_mode,
                                         attention_mode)
         latest = tf.train.latest_checkpoint(self.weights_path)
-        self.encode_inp = tf.compat.v1.placeholder(tf.int32, (None, None))
-        self.decode_inp = tf.compat.v1.placeholder(tf.int32, (None, None))
-        self.model(self.encode_inp, self.decode_inp)
+
         self.model.load_weights(latest)
 
     def predict(self, sentence):

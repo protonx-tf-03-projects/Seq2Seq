@@ -49,7 +49,6 @@ class Seq2Seq:
         if not os.path.exists(self.path_save):
             os.mkdir(self.path_save)
 
-        self.save_checkpoint = self.path_save + "/model.ckpt"
         self.debug = debug
         self.use_bleu = use_bleu
 
@@ -137,8 +136,8 @@ class Seq2Seq:
                 print("-----------------------------------------------------------------")
                 print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
                 if bleu_score > tmp:
-                    tf.saved_model.save(self.translator, "translate",
-                                        signatures={'serving_default': self.translator.translate_default})
+                    tf.saved_model.save(self.translator,
+                                        export_dir=self.path_save)
                     print("[INFO] Saved model in '{}' direction!".format(self.path_save))
                     tmp = bleu_score
                 print("=================================================================\n")
@@ -146,8 +145,8 @@ class Seq2Seq:
                 print("=================================================================")
                 print(f'Epoch {epoch + 1} -- Loss: {loss}')
                 print("=================================================================\n")
-        tf.saved_model.save(self.translator, "translate",
-                            signatures={'serving_default': self.translator.translate_default})
+        tf.saved_model.save(self.translator,
+                            export_dir=self.path_save)
 
     def training_with_attention(self, train_ds, N_BATCH):
         tmp = 0
@@ -162,7 +161,7 @@ class Seq2Seq:
                     encoder_outs, last_state = self.encoder(x)
                     for i in range(1, y.shape[1]):
                         # Decoder
-                        decode_out, last_state = self.decoder(dec_input, last_state)
+                        decode_out, last_state = self.decoder(dec_input, encoder_outs, last_state)
                         # Loss
                         loss += self.loss(y[:, i], decode_out)
                         # Decoder input
@@ -186,8 +185,8 @@ class Seq2Seq:
                 print("-----------------------------------------------------------------")
                 print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {bleu_score}')
                 if bleu_score > tmp:
-                    tf.saved_model.save(self.translator, "translate",
-                                        signatures={'serving_default': self.translator.translate_with_attention})
+                    tf.saved_model.save(self.translator,
+                                        export_dir=self.path_save)
                     print("[INFO] Saved model in '{}' direction!".format(self.path_save))
                     tmp = bleu_score
                 print("=================================================================\n")
@@ -195,8 +194,8 @@ class Seq2Seq:
                 print("=================================================================")
                 print(f'Epoch {epoch + 1} -- Loss: {total_loss}')
                 print("=================================================================\n")
-        tf.saved_model.save(self.translator, "translate",
-                            signatures={'serving_default': self.translator.translate_with_attention})
+        tf.saved_model.save(self.translator,
+                            export_dir=self.path_save)
 
     def run(self):
         # Padding in sequences
