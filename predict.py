@@ -6,60 +6,6 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from data import DatasetLoader
 
 
-class Translate(tf.keras.Model):
-    def __init__(self,
-                 inp_lang_path,
-                 tar_lang_path,
-                 encoder,
-                 decoder,
-                 tar_builder,
-                 min_length=10,
-                 max_length=14):
-        super(Translate, self).__init__()
-
-        self.encoder = encoder
-        self.decoder = decoder
-        self.tar_builder = tar_builder
-        self.max_length = max_length
-
-        self.loader = DatasetLoader(inp_lang_path,
-                                    tar_lang_path,
-                                    min_length,
-                                    max_length)
-        _, _, self.inp_builder, self.tar_builder = self.loader.build_dataset()
-
-    def translate_enroll(self, input_text):
-        vector = self.loader.remove_punctuation(input_text)
-        # Encoder
-        _, last_state = self.encoder(vector)
-        # Process decoder input
-        input_decode = tf.reshape(tf.constant([self.tar_builder.word_index['<sos>']]), shape=(-1, 1))
-        pred_sentence = ""
-        for _ in range(self.max_length):
-            output, last_state = self.decoder(input_decode, last_state)
-            pred_id = tf.argmax(output, axis=2).numpy()
-            input_decode = pred_id
-            pred_sentence += " " + self.tar_builder.index_word[pred_id[0][0]]
-        text = [w for w in pred_sentence.split() if w not in ["<sos>", "<eos>"]]
-        return text
-
-    def translate_with_attention_enroll(self, input_text):
-        vector = self.loader.remove_punctuation(input_text)
-        test_x = tf.expand_dims(vector, axis=0)
-        # Encoder
-        encode_outs, last_state = self.model.encoder(test_x)
-        # Process decoder input
-        input_decode = tf.constant([self.tar_builder.word_index['<sos>']])
-        pred_sentence = ""
-        for _ in range(self.max_sentence):
-            output, last_state = self.model.decoder(input_decode, encode_outs, last_state)
-            pred_id = tf.argmax(output, axis=1).numpy()
-            input_decode = pred_id
-            pred_sentence += " " + self.tar_builder.index_word[pred_id[0]]
-        text = [w for w in pred_sentence.split() if w not in ["<sos>", "<eos>"]]
-        return text
-
-
 class PredictionSentence:
     def __init__(self,
                  inp_lang_path,
@@ -164,7 +110,7 @@ class PredictionSentence:
 
     def predict(self, sentence):
         """
-        :param test_ds: (inp_vocab, tar_vocab)
+        :param sentence: (1, vocab_length)
         :param (inp_lang, tar_lang)
         :return:
         """
@@ -187,7 +133,7 @@ class PredictionSentence:
 
     def predict_with_attention(self, sentence):
         """
-        :param test_ds: (inp_vocab, tar_vocab)
+        :param sentence: (1, vocab_length)
         :param (inp_lang, tar_lang)
         :return:
         """

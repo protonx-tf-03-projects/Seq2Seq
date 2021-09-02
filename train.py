@@ -155,7 +155,7 @@ class Seq2Seq:
             for _, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
                 if self.train_mode.lower() == "attention":
                     total_loss += self.train_step_with_attention(x, y)
-                else:
+                elif self.train_mode.lower() != "attention":
                     total_loss += self.train_step(x, y)
 
             if self.use_bleu:
@@ -169,7 +169,7 @@ class Seq2Seq:
                                                            tar_builder=self.tar_builder,
                                                            test_split_size=self.test_split_size,
                                                            debug=self.debug)
-                else:
+                elif self.train_mode.lower() != "attention":
                     bleu_score = evaluation(encoder=self.encoder,
                                             decoder=self.decoder,
                                             test_ds=train_ds,

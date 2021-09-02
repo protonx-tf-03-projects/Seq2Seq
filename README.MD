@@ -51,9 +51,9 @@ Training script:
 ```bash
 python train.py  --inp-lang=${path_to_en_text_file} --target-lang=${path_to_vi_text_file} \
                  --batch-size=128 --hidden-units=128 --embedding-size=64 \
-                 --epochs=1000  --test-split-size=0.05 --min-sentence=10 \
-                 --max-sentence=14 --use-lr-schedule=False --learning_rate=0.005 \
-                 --train-mode="not_attention" --debug=True
+                 --epochs=1000 --train-mode="not_attention" --test-split-size=0.1 \
+                 --min-sentence=10 --max-sentence=14 \
+                 --learning-rate=0.005 --bleu=True --debug=True
 ```
 
 - Use attention
@@ -61,10 +61,14 @@ python train.py  --inp-lang=${path_to_en_text_file} --target-lang=${path_to_vi_t
 ```bash
 python train.py  --inp-lang=${path_to_en_text_file} --target-lang=${path_to_vi_text_file} \
                  --batch-size=128 --hidden-units=512 --embedding-size=256 \
-                 --epochs=1000 --test-split-size=0.05 --min-sentence=10 \
-                 --max-sentence=14 --warmup-steps=100 --train-mode="attention" \
-                 --use-lr-schedule=True --debug=True
+                 --epochs=1000 --train-mode="attention" --test-split-size=0.001 \
+                 --min-sentence=10 --max-sentence=14 --debug=True \
+                 --warmup-steps=150 --use-lr-schedule=True --bleu=True
 ```
+
+**Note**:
+
+- If you want to retrain model, you can use this param: ```--retrain=True```
 
 There are some important arguments for the script you should consider when running it:
 
@@ -78,8 +82,8 @@ There are some important arguments for the script you should consider when runni
 
 ```bash
 python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_input_data} \
-                  --tar-lang-path=${link_to_target_data} --hidden-units=64 \
-                  --embedding-size=32 --min-sentence=10 --max-sentence=14 \
+                  --tar-lang-path=${link_to_target_data} --hidden-units=128 \
+                  --embedding-size=64 --min-sentence=10 --max-sentence=14 \
                   --train-mode="not_attention"
 ```
 
@@ -87,14 +91,15 @@ python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_inp
 
 ```bash
 python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_input_data} \
-                  --tar-lang-path=${link_to_target_data} --hidden-units=64 \
-                  --embedding-size=32 --min-sentence=10 --max-sentence=14 \
+                  --tar-lang-path=${link_to_target_data} --hidden-units=512 \
+                  --embedding-size=256 --min-sentence=10 --max-sentence=14 \
                   --attention-mode="luong" --train-mode="attention"
 ```
 
 ## V. Result and Comparision
 
-- Your implementation using Encode-Decode:
+Implementation using Encode-Decode:
+
 ```
 100% 116/116 [00:02<00:00, 44.00it/s]
 -----------------------------------------------------------------
@@ -126,7 +131,7 @@ Epoch 376 -- Loss: 30.585018157958984 -- Bleu_score: 0.6258203949505547
 =================================================================
 ```
 
-Your comments about these results:
+Comments about these results:
 
 - Model with no attention is good at sort sequences about 5 to 14 characteristics.
-- Model with attention needs a lot of data for training to get the best.
+- Model with attention needs a lot of data for training to get the good.
