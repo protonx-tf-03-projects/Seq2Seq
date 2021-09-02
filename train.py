@@ -8,7 +8,6 @@ from argparse import ArgumentParser
 from constant import MaskedSoftmaxCELoss, Bleu_score, CustomSchedule, evaluation, evaluation_with_attention
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from model.tests.model import LuongDecoder, BahdanauDecode, Decode, Encode
-from predict import Translate
 
 
 class Seq2Seq:
@@ -62,9 +61,6 @@ class Seq2Seq:
             learning_rate = CustomSchedule(self.hidden_units, warmup_steps=warmup_steps)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
 
-        # Initialize loss function
-        self.loss = MaskedSoftmaxCELoss()
-
         # Initialize Bleu function
         self.bleu = Bleu_score()
 
@@ -94,110 +90,50 @@ class Seq2Seq:
                                   hidden_units)
 
         # Initialize translation
-        self.translator = Translate(self.inp_lang_path,
-                                    self.tar_lang_path,
-                                    self.encoder,
-                                    self.decoder,
-                                    self.tar_builder,
-                                    self.min_sentence,
-                                    self.max_sentence)
+        self.checkpoint_prefix = os.path.join(self.path_save, "ckpt")
+        self.checkpoint = tf.train.Checkpoint(optimizer=self.optimizer,
+                                              encoder=self.encoder,
+                                              decoder=self.decoder)
 
-    def training(self, train_ds, N_BATCH):
-        tmp = 0
-        for epoch in range(self.EPOCHS):
-            loss = 0
-            for _, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
-                with tf.GradientTape() as tape:
-                    # Teacher forcing
-                    sos = tf.reshape(tf.constant([self.tar_builder.word_index['<sos>']] * self.BATCH_SIZE),
-                                     shape=(-1, 1))
-                    dec_input = tf.concat([sos, y[:, :-1]], 1)
-                    # Encoder
-                    _, last_state = self.encoder(x)
-                    # Decoder
-                    outs, last_state = self.decoder(dec_input, last_state)
-                    # Loss
-                    loss += self.loss(y, outs)
+    def train_step(self, x, y):
+        with tf.GradientTape() as tape:
+            # Teacher forcing
+            sos = tf.reshape(tf.constant([self.tar_builder.word_index['<sos>']] * self.BATCH_SIZE),
+                             shape=(-1, 1))
+            dec_input = tf.concat([sos, y[:, :-1]], 1)
+            # Encoder
+            _, last_state = self.encoder(x)
+            # Decoder
+            outs, last_state = self.decoder(dec_input, last_state)
+            # Loss
+            loss = MaskedSoftmaxCELoss(y, outs)
 
-                train_vars = self.encoder.trainable_variables + self.decoder.trainable_variables
-                grads = tape.gradient(loss, train_vars)
-                self.optimizer.apply_gradients(zip(grads, train_vars))
+        train_vars = self.encoder.trainable_variables + self.decoder.trainable_variables
+        grads = tape.gradient(loss, train_vars)
+        self.optimizer.apply_gradients(zip(grads, train_vars))
+        return loss
 
-            if self.use_bleu:
-                print("\n=================================================================")
-                bleu_score = evaluation(encoder=self.encoder,
-                                        decoder=self.decoder,
-                                        test_ds=train_ds,
-                                        val_function=self.bleu,
-                                        inp_builder=self.inp_builder,
-                                        tar_builder=self.tar_builder,
-                                        test_split_size=self.test_split_size,
-                                        debug=self.debug)
-                print("-----------------------------------------------------------------")
-                print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
-                if bleu_score > tmp:
-                    tf.saved_model.save(self.translator,
-                                        export_dir=self.path_save)
-                    print("[INFO] Saved model in '{}' direction!".format(self.path_save))
-                    tmp = bleu_score
-                print("=================================================================\n")
-            else:
-                print("=================================================================")
-                print(f'Epoch {epoch + 1} -- Loss: {loss}')
-                print("=================================================================\n")
-        tf.saved_model.save(self.translator,
-                            export_dir=self.path_save)
+    def train_step_with_attention(self, x, y):
+        loss = 0
+        with tf.GradientTape() as tape:
+            # Teaching force
+            dec_input = tf.constant([self.tar_builder.word_index['<sos>']] * self.BATCH_SIZE)
+            # Encoder
+            encoder_outs, last_state = self.encoder(x)
+            for i in range(1, y.shape[1]):
+                # Decoder
+                decode_out, last_state = self.decoder(dec_input, encoder_outs, last_state)
+                # Loss
+                loss += MaskedSoftmaxCELoss(y[:, i], decode_out)
+                # Decoder input
+                dec_input = y[:, i]
 
-    def training_with_attention(self, train_ds, N_BATCH):
-        tmp = 0
-        for epoch in range(self.EPOCHS):
-            total_loss = 0
-            for batch_size, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
-                loss = 0
-                with tf.GradientTape() as tape:
-                    # Teaching force
-                    dec_input = tf.constant([self.tar_builder.word_index['<sos>']] * self.BATCH_SIZE)
-                    # Encoder
-                    encoder_outs, last_state = self.encoder(x)
-                    for i in range(1, y.shape[1]):
-                        # Decoder
-                        decode_out, last_state = self.decoder(dec_input, encoder_outs, last_state)
-                        # Loss
-                        loss += self.loss(y[:, i], decode_out)
-                        # Decoder input
-                        dec_input = y[:, i]
+        train_vars = self.encoder.trainable_variables + self.decoder.trainable_variables
+        grads = tape.gradient(loss, train_vars)
+        self.optimizer.apply_gradients(zip(grads, train_vars))
+        return loss
 
-                train_vars = self.encoder.trainable_variables + self.decoder.trainable_variables
-                grads = tape.gradient(loss, train_vars)
-                self.optimizer.apply_gradients(zip(grads, train_vars))
-                total_loss += loss
-
-            if self.use_bleu:
-                print("\n=================================================================")
-                bleu_score = evaluation_with_attention(encoder=self.encoder,
-                                                       decoder=self.decoder,
-                                                       test_ds=train_ds,
-                                                       val_function=self.bleu,
-                                                       inp_builder=self.inp_builder,
-                                                       tar_builder=self.tar_builder,
-                                                       test_split_size=self.test_split_size,
-                                                       debug=self.debug)
-                print("-----------------------------------------------------------------")
-                print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {bleu_score}')
-                if bleu_score > tmp:
-                    tf.saved_model.save(self.translator,
-                                        export_dir=self.path_save)
-                    print("[INFO] Saved model in '{}' direction!".format(self.path_save))
-                    tmp = bleu_score
-                print("=================================================================\n")
-            else:
-                print("=================================================================")
-                print(f'Epoch {epoch + 1} -- Loss: {total_loss}')
-                print("=================================================================\n")
-        tf.saved_model.save(self.translator,
-                            export_dir=self.path_save)
-
-    def run(self):
+    def training(self):
         # Padding in sequences
         train_x = pad_sequences(self.inp_tensor,
                                 maxlen=self.max_length,
@@ -210,14 +146,39 @@ class Seq2Seq:
 
         # Add to tensor
         train_ds = tf.data.Dataset.from_tensor_slices((train_x, train_y))
-
         N_BATCH = train_x.shape[0] // self.BATCH_SIZE
 
-        # Training
-        if self.train_mode.lower() == "attention":
-            self.training_with_attention(train_ds, N_BATCH)
-        else:
-            self.training(train_ds, N_BATCH)
+        tmp = 0
+        for epoch in range(self.EPOCHS):
+            total_loss = 0
+            for _, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
+                if self.train_mode.lower() == "attention":
+                    total_loss += self.train_step_with_attention(x, y)
+                else:
+                    total_loss += self.train_step(x, y)
+
+            if self.use_bleu:
+                print("\n=================================================================")
+                bleu_score = evaluation(encoder=self.encoder,
+                                        decoder=self.decoder,
+                                        test_ds=train_ds,
+                                        val_function=self.bleu,
+                                        inp_builder=self.inp_builder,
+                                        tar_builder=self.tar_builder,
+                                        test_split_size=self.test_split_size,
+                                        debug=self.debug)
+                print("-----------------------------------------------------------------")
+                print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {bleu_score}')
+                if bleu_score > tmp:
+                    self.checkpoint.save(file_prefix=self.checkpoint_prefix)
+                    print("[INFO] Saved model in '{}' direction!".format(self.path_save))
+                    tmp = bleu_score
+                print("=================================================================\n")
+            else:
+                print("=================================================================")
+                print(f'Epoch {epoch + 1} -- Loss: {total_loss}')
+                print("=================================================================\n")
+        self.checkpoint.save(file_prefix=self.checkpoint_prefix)
 
 
 if __name__ == "__main__":
@@ -276,6 +237,6 @@ if __name__ == "__main__":
             use_lr_schedule=args.use_lr_schedule,
             retrain=args.retrain,
             use_bleu=args.bleu,
-            debug=args.debug).run()
+            debug=args.debug).training()
 
     # python train.py --inp-lang="dataset/train.en.txt" --tar-lang="dataset/train.vi.txt" --hidden-units=256 --embedding-size=128 --epochs=200 --test-split-size=0.01 --train-mode="attention" --debug=True
