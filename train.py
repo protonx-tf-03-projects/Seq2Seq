@@ -101,24 +101,24 @@ class Seq2Seq:
                 grads = tape.gradient(loss, train_vars)
                 self.optimizer.apply_gradients(zip(grads, train_vars))
 
-                print("\n=================================================================")
-                if self.use_bleu:
-                    bleu_score = evaluation_with_attention(model=self.model,
-                                                           test_ds=train_ds,
-                                                           val_function=self.bleu,
-                                                           inp_builder=self.inp_builder,
-                                                           tar_builder=self.tar_builder,
-                                                           test_split_size=self.test_split_size,
-                                                           debug=self.debug)
-                    print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
-                    if bleu_score > tmp:
-                        self.model.save_weights(self.save_checkpoint)
-                        print("[INFO] Saved model in '{}' direction!".format(self.path_save))
-                        tmp = bleu_score
-                else:
-                    print(f'Epoch {epoch + 1} -- Loss: {loss}')
-                print("=================================================================\n")
-            self.model.save_weights(self.save_checkpoint)
+            print("\n=================================================================")
+            if self.use_bleu:
+                bleu_score = evaluation_with_attention(model=self.model,
+                                                       test_ds=train_ds,
+                                                       val_function=self.bleu,
+                                                       inp_builder=self.inp_builder,
+                                                       tar_builder=self.tar_builder,
+                                                       test_split_size=self.test_split_size,
+                                                       debug=self.debug)
+                print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
+                if bleu_score > tmp:
+                    self.model.save_weights(self.save_checkpoint)
+                    print("[INFO] Saved model in '{}' direction!".format(self.path_save))
+                    tmp = bleu_score
+            else:
+                print(f'Epoch {epoch + 1} -- Loss: {loss}')
+            print("=================================================================\n")
+        self.model.save_weights(self.save_checkpoint)
 
     def training_with_attention(self, train_ds, N_BATCH):
         tmp = 0
