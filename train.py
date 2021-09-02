@@ -121,7 +121,9 @@ class Seq2Seq:
                     tmp = bleu_score
                 print("=================================================================\n")
             else:
+                print("=================================================================")
                 print(f'Epoch {epoch + 1} -- Loss: {loss}')
+                print("=================================================================\n")
         self.model.save_weights(self.save_checkpoint)
 
     def training_with_attention(self, train_ds, N_BATCH):
@@ -159,7 +161,9 @@ class Seq2Seq:
                     tmp = bleu_score
                 print("=================================================================\n")
             else:
+                print("=================================================================")
                 print(f'Epoch {epoch + 1} -- Loss: {total_loss}')
+                print("=================================================================\n")
 
         self.model.save_weights(self.save_checkpoint)
 
