@@ -50,7 +50,7 @@ Training script:
 
 ```bash
 python train.py  --inp-lang=${path_to_en_text_file} --target-lang=${path_to_vi_text_file} \
-                 --batch-size=128 --hidden-units=64 --embedding-size=32 \
+                 --batch-size=128 --hidden-units=128 --embedding-size=64 \
                  --epochs=1000  --test-split-size=0.05 --min-sentence=10 \
                  --max-sentence=14 --use-lr-schedule=False --learning_rate=0.005 \
                  --train-mode="not_attention" --debug=True
@@ -94,11 +94,35 @@ python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_inp
 
 ## V. Result and Comparision
 
-Your implementation using Encode-Decode:
-<b align="center">
-<img src="F:\4. PROJECT_TF_03\Seq2Seq\assets\result_1.png"/>
-</b>
+- Your implementation using Encode-Decode:
+```
+100% 116/116 [00:05<00:00, 21.13it/s]
+-----------------------------------------------------------------
+Input    :  <sos> they wrote almost a thousand pages on the topic <eos>
+Predicted:  <sos> họ viết gần 1000 trang về chủ đề này <eos> <eos> <eos> <eos>
+Target   :  <sos> họ viết gần 1000 trang về chủ đề này <eos>
+-----------------------------------------------------------------
+Input    :  <sos> we blow it up and look at the pieces <eos>
+Predicted:  <sos> chúng tôi cho nó nổ và xem xét từng còn nhỏ <eos> <eos>
+Target   :  <sos> chúng tôi cho nó nổ và xem xét từng mảnh nhỏ <eos>
+-----------------------------------------------------------------
+Input    :  <sos> this is the euphore smog chamber in spain <eos>
+Predicted:  <sos> đây là phòng nghiên cứu khói bụi euphore ở tây ban nha <eos>
+Target   :  <sos> đây là phòng nghiên cứu khói bụi euphore ở tây ban nha <eos>
+-----------------------------------------------------------------
+Input    :  <sos> we also fly all over the world looking for this thing <eos>
+Predicted:  <sos> chúng tôi còn bay khắp thế giới động vật dối <eos> chị bé
+Target   :  <sos> chúng tôi còn bay khắp thế giới để tìm phân tử này <eos>
+-----------------------------------------------------------------
+Input    :  <sos> this is the tower in the middle of the rainforest from above <eos>
+Predicted:  <sos> đây chính là cái tháp giữa rừng sâu các y hàng <eos> <eos>
+Target   :  <sos> đây chính là cái tháp giữa rừng sâu nhìn từ trên cao <eos>
+=================================================================
+Epoch 177 -- Loss: 39.446617126464844 -- Bleu_score: 0.5644560218884062
+=================================================================
+```
 
 Your comments about these results:
 
-- This model is good at sort sequences about 5 to 14 characteristics
+- Model with no attention is good at sort sequences about 5 to 14 characteristics.
+- Model with attention needs a lot of data for training to get the best.
