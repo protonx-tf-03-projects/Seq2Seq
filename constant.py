@@ -117,7 +117,7 @@ def evaluation(model,
         test_x = tf.expand_dims(test_, axis=0)
         _, last_state = model.encoder(test_x)
 
-        input_decode = tf.reshape(tf.constant([tar_builder.word2id['<sos>']]), shape=(-1, 1))
+        input_decode = tf.reshape(tf.constant([tar_builder.word_index['<sos>']]), shape=(-1, 1))
         sentence = []
         for _ in range(len(test_y)):
             output, last_state = model.decoder(input_decode, last_state, training=False)
@@ -125,13 +125,16 @@ def evaluation(model,
             input_decode = output
             sentence.append(output[0][0])
 
-        score += val_function(tar_builder.vector_to_sentence(sentence),
-                              tar_builder.vector_to_sentence(test_y.numpy()))
+        input_sequence = inp_builder.sequences_to_texts([test_.numpy()])[0]
+        pred_sequence = tar_builder.sequences_to_texts([sentence])[0]
+        target_sequence = tar_builder.sequences_to_texts([test_y.numpy()])[0]
+        score += val_function(pred_sequence,
+                              target_sequence)
         if debug and count <= 5:
             print("-----------------------------------------------------------------")
-            print("Input    : ", inp_builder.vector_to_sentence(test_.numpy()))
-            print("Predicted: ", tar_builder.vector_to_sentence(sentence))
-            print("Target   : ", tar_builder.vector_to_sentence(test_y.numpy()))
+            print("Input    : ", input_sequence)
+            print("Predicted: ", pred_sequence)
+            print("Target   : ", target_sequence)
             count += 1
     return score / test_ds_len
 
@@ -155,7 +158,7 @@ def evaluation_with_attention(model,
     for test_, test_y in test_ds.shuffle(buffer_size=1, seed=1).take(test_ds_len):
         test_x = tf.expand_dims(test_, axis=0)
         encode_outs, last_state = model.encoder(test_x)
-        input_decode = tf.constant([tar_builder.word2id['<sos>']])
+        input_decode = tf.constant([tar_builder.word_index['<sos>']])
         sentence = []
         for _ in range(len(test_y)):
             output, last_state = model.decoder(input_decode, encode_outs, last_state, training=False)
@@ -163,13 +166,17 @@ def evaluation_with_attention(model,
             input_decode = pred_id
             sentence.append(pred_id[0])
 
-        score += val_function(tar_builder.vector_to_sentence(sentence),
-                              tar_builder.vector_to_sentence(test_y.numpy()))
+        input_sequence = inp_builder.sequences_to_texts([test_.numpy()])[0]
+        pred_sequence = tar_builder.sequences_to_texts([sentence])[0]
+        target_sequence = tar_builder.sequences_to_texts([test_y.numpy()])[0]
+
+        score += val_function(pred_sequence,
+                              target_sequence)
         if debug and count <= 5:
             print("-----------------------------------------------------------------")
-            print("Input    : ", inp_builder.vector_to_sentence(test_.numpy()))
-            print("Predicted: ", tar_builder.vector_to_sentence(sentence))
-            print("Target   : ", tar_builder.vector_to_sentence(test_y.numpy()))
+            print("Input    : ", input_sequence)
+            print("Predicted: ", pred_sequence)
+            print("Target   : ", target_sequence)
             count += 1
     return score / test_ds_len
 
