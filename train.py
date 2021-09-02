@@ -101,8 +101,8 @@ class Seq2Seq:
                 grads = tape.gradient(loss, train_vars)
                 self.optimizer.apply_gradients(zip(grads, train_vars))
 
-            print("\n=================================================================")
             if self.use_bleu:
+                print("\n=================================================================")
                 bleu_score = evaluation_with_attention(model=self.model,
                                                        test_ds=train_ds,
                                                        val_function=self.bleu,
@@ -115,9 +115,9 @@ class Seq2Seq:
                     self.model.save_weights(self.save_checkpoint)
                     print("[INFO] Saved model in '{}' direction!".format(self.path_save))
                     tmp = bleu_score
+                print("=================================================================\n")
             else:
                 print(f'Epoch {epoch + 1} -- Loss: {loss}')
-            print("=================================================================\n")
         self.model.save_weights(self.save_checkpoint)
 
     def training_with_attention(self, train_ds, N_BATCH):
@@ -138,8 +138,8 @@ class Seq2Seq:
                 self.optimizer.apply_gradients(zip(grads, train_vars))
                 total_loss += loss
 
-            print("\n=================================================================")
             if self.use_bleu:
+                print("\n=================================================================")
                 bleu_score = evaluation_with_attention(model=self.model,
                                                        test_ds=train_ds,
                                                        val_function=self.bleu,
@@ -152,9 +152,10 @@ class Seq2Seq:
                     self.model.save_weights(self.save_checkpoint)
                     print("[INFO] Saved model in '{}' direction!".format(self.path_save))
                     tmp = bleu_score
+                print("=================================================================\n")
             else:
                 print(f'Epoch {epoch + 1} -- Loss: {total_loss}')
-            print("=================================================================\n")
+
         self.model.save_weights(self.save_checkpoint)
 
     def run(self):
