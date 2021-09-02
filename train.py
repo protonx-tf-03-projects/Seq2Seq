@@ -26,6 +26,7 @@ class Seq2Seq:
                  train_mode="attention",
                  attention_mode="luong",  # Bahdanau
                  use_lr_schedule=False,
+                 use_bleu=False,
                  retrain=False,
                  debug=False):
         self.inp_lang_path = inp_lang_path
@@ -43,12 +44,13 @@ class Seq2Seq:
         self.train_mode = train_mode
         self.attention_mode = attention_mode
 
-        path_save = os.getcwd() + "/saved_models"
-        if not os.path.exists(path_save):
-            os.mkdir(path_save)
+        self.path_save = os.getcwd() + "/saved_models"
+        if not os.path.exists(self.path_save):
+            os.mkdir(self.path_save)
 
-        self.save_model = path_save + "/model.ckpt"
+        self.save_checkpoint = self.path_save + "/model.ckpt"
         self.debug = debug
+        self.use_bleu = use_bleu
 
         # Load dataset
         self.inp_tensor, self.tar_tensor, self.inp_builder, self.tar_builder = DatasetLoader(self.inp_lang_path,
@@ -67,7 +69,7 @@ class Seq2Seq:
         self.bleu = Bleu_score()
 
         # Initialize Seq2Seq model
-        if retrain and os.path.exists(self.save_model):
+        if retrain and os.listdir(self.path_save) != []:
             print("[INFO] Start retrain...")
             self.model = SequenceToSequence(self.inp_builder.vocab_size,
                                             self.tar_builder.vocab_size,
@@ -75,7 +77,7 @@ class Seq2Seq:
                                             self.hidden_units,
                                             self.train_mode,
                                             self.attention_mode)
-            self.model.load_weights(self.save_model)
+            self.model.load_weights(self.path_save)
         else:
             self.model = SequenceToSequence(self.inp_builder.vocab_size,
                                             self.tar_builder.vocab_size,
@@ -99,20 +101,24 @@ class Seq2Seq:
                 grads = tape.gradient(loss, train_vars)
                 self.optimizer.apply_gradients(zip(grads, train_vars))
 
-            bleu_score = evaluation(model=self.model,
-                                    test_ds=train_ds,
-                                    val_function=self.bleu,
-                                    inp_builder=self.inp_builder,
-                                    tar_builder=self.tar_builder,
-                                    test_split_size=self.test_split_size,
-                                    debug=self.debug)
-            print("\n=================================================================")
-            print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
-            if bleu_score > tmp:
-                self.model.save_weights(self.save_model)
-                print("[INFO] Saved model in '{}' direction!".format(self.save_model))
-                tmp = bleu_score
-            print("=================================================================\n")
+                print("\n=================================================================")
+                if self.use_bleu:
+                    bleu_score = evaluation_with_attention(model=self.model,
+                                                           test_ds=train_ds,
+                                                           val_function=self.bleu,
+                                                           inp_builder=self.inp_builder,
+                                                           tar_builder=self.tar_builder,
+                                                           test_split_size=self.test_split_size,
+                                                           debug=self.debug)
+                    print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
+                    if bleu_score > tmp:
+                        self.model.save_weights(self.save_checkpoint)
+                        print("[INFO] Saved model in '{}' direction!".format(self.path_save))
+                        tmp = bleu_score
+                else:
+                    print(f'Epoch {epoch + 1} -- Loss: {loss}')
+                print("=================================================================\n")
+            self.model.save_weights(self.save_checkpoint)
 
     def training_with_attention(self, train_ds, N_BATCH):
         tmp = 0
@@ -132,20 +138,24 @@ class Seq2Seq:
                 self.optimizer.apply_gradients(zip(grads, train_vars))
                 total_loss += loss
 
-            bleu_score = evaluation_with_attention(model=self.model,
-                                                   test_ds=train_ds,
-                                                   val_function=self.bleu,
-                                                   inp_builder=self.inp_builder,
-                                                   tar_builder=self.tar_builder,
-                                                   test_split_size=self.test_split_size,
-                                                   debug=self.debug)
             print("\n=================================================================")
-            print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {bleu_score}')
-            if bleu_score > tmp:
-                self.model.save_weights(self.save_model)
-                print("[INFO] Saved model in '{}' direction!".format(self.save_model))
-                tmp = bleu_score
+            if self.use_bleu:
+                bleu_score = evaluation_with_attention(model=self.model,
+                                                       test_ds=train_ds,
+                                                       val_function=self.bleu,
+                                                       inp_builder=self.inp_builder,
+                                                       tar_builder=self.tar_builder,
+                                                       test_split_size=self.test_split_size,
+                                                       debug=self.debug)
+                print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {bleu_score}')
+                if bleu_score > tmp:
+                    self.model.save_weights(self.save_checkpoint)
+                    print("[INFO] Saved model in '{}' direction!".format(self.path_save))
+                    tmp = bleu_score
+            else:
+                print(f'Epoch {epoch + 1} -- Loss: {total_loss}')
             print("=================================================================\n")
+        self.model.save_weights(self.save_checkpoint)
 
     def run(self):
         # Padding in sequences
@@ -190,6 +200,7 @@ if __name__ == "__main__":
     parser.add_argument("--attention-mode", default="luong", type=str)
     parser.add_argument("--use-lr-schedule", default=False, type=bool)
     parser.add_argument("--retrain", default=False, type=bool)
+    parser.add_argument("--use-bleu", default=False, type=bool)
     parser.add_argument("--debug", default=False, type=bool)
 
     args = parser.parse_args()
@@ -224,6 +235,7 @@ if __name__ == "__main__":
             attention_mode=args.attention_mode,
             use_lr_schedule=args.use_lr_schedule,
             retrain=args.retrain,
+            use_bleu=args.use_bleu,
             debug=args.debug).run()
 
     # python train.py --inp-lang="dataset/train.en.txt" --tar-lang="dataset/train.vi.txt" --hidden-units=256 --embedding-size=128 --epochs=200 --test-split-size=0.01 --train-mode="attention" --debug=True
