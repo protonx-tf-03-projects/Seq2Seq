@@ -116,7 +116,7 @@ class Seq2Seq:
                     # Encoder
                     _, last_state = self.encoder(x)
                     # Decoder
-                    outs = self.decoder(dec_input, last_state)
+                    outs, last_state = self.decoder(dec_input, last_state)
                     # Loss
                     loss += self.loss(y, outs)
 
@@ -162,7 +162,7 @@ class Seq2Seq:
                     encoder_outs, last_state = self.encoder(x)
                     for i in range(1, y.shape[1]):
                         # Decoder
-                        decode_out = self.decoder(dec_input, last_state)
+                        decode_out, last_state = self.decoder(dec_input, last_state)
                         # Loss
                         loss += self.loss(y[:, i], decode_out)
                         # Decoder input
