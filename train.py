@@ -67,7 +67,7 @@ class Seq2Seq:
         self.bleu = Bleu_score()
 
         # Initialize Seq2Seq model
-        if retrain and os.listdir(self.save_model) != []:
+        if retrain and os.path.exists(self.save_model):
             print("[INFO] Start retrain...")
             self.model = SequenceToSequence(self.inp_builder.vocab_size,
                                             self.tar_builder.vocab_size,
