@@ -1,6 +1,4 @@
 import os
-import time
-import numpy as np
 import tensorflow as tf
 from tqdm import tqdm
 from data import DatasetLoader
@@ -94,6 +92,9 @@ class Seq2Seq:
         self.checkpoint = tf.train.Checkpoint(optimizer=self.optimizer,
                                               encoder=self.encoder,
                                               decoder=self.decoder)
+        if retrain:
+            print("[INFO] Retrain model with latest checkpoint...")
+            self.checkpoint.restore(tf.train.latest_checkpoint(self.path_save)).expect_partial()
 
     def train_step(self, x, y):
         with tf.GradientTape() as tape:
@@ -159,14 +160,25 @@ class Seq2Seq:
 
             if self.use_bleu:
                 print("\n=================================================================")
-                bleu_score = evaluation(encoder=self.encoder,
-                                        decoder=self.decoder,
-                                        test_ds=train_ds,
-                                        val_function=self.bleu,
-                                        inp_builder=self.inp_builder,
-                                        tar_builder=self.tar_builder,
-                                        test_split_size=self.test_split_size,
-                                        debug=self.debug)
+                if self.train_mode.lower() == "attention":
+                    bleu_score = evaluation_with_attention(encoder=self.encoder,
+                                                           decoder=self.decoder,
+                                                           test_ds=train_ds,
+                                                           val_function=self.bleu,
+                                                           inp_builder=self.inp_builder,
+                                                           tar_builder=self.tar_builder,
+                                                           test_split_size=self.test_split_size,
+                                                           debug=self.debug)
+                else:
+                    bleu_score = evaluation(encoder=self.encoder,
+                                            decoder=self.decoder,
+                                            test_ds=train_ds,
+                                            val_function=self.bleu,
+                                            inp_builder=self.inp_builder,
+                                            tar_builder=self.tar_builder,
+                                            test_split_size=self.test_split_size,
+                                            debug=self.debug)
+
                 print("-----------------------------------------------------------------")
                 print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {bleu_score}')
                 if bleu_score > tmp:
@@ -178,6 +190,8 @@ class Seq2Seq:
                 print("=================================================================")
                 print(f'Epoch {epoch + 1} -- Loss: {total_loss}')
                 print("=================================================================\n")
+
+        print("[INFO] Saved model in '{}' direction!".format(self.path_save))
         self.checkpoint.save(file_prefix=self.checkpoint_prefix)
 
 

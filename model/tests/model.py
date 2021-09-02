@@ -24,7 +24,7 @@ class Encode(tf.keras.Model):
 
     def __call__(self, x, *args, **kwargs):
         """
-        :input:
+        :Input:
             - x: [batch_size, max_length]
 
         :return:
@@ -61,7 +61,7 @@ class Decode(tf.keras.Model):
 
     def __call__(self, x, state, *args, **kwargs):
         """
-        :input:
+        :Input:
             - x: [batch_size, max_length]
             - State:
                 + state_h: [batch_size, hidden_units] - Hidden state in encode layer
@@ -132,7 +132,7 @@ class BahdanauDecode(tf.keras.Model):
 
     def __call__(self, x, encoder_outs, state, *args, **kwargs):
         """
-        :input:
+        :Input:
             - x: [batch_size, max_length]
             - encode_output: [batch_size, max_length, hidden_units]
             - State:
@@ -173,7 +173,7 @@ class LuongDecoder(tf.keras.Model):
 
     def __call__(self, x, encoder_outs, state, *args, **kwargs):
         """
-        :input:
+        :Input:
             - x: [batch_size, max_length]
             - encode_output: [batch_size, max_length, hidden_units]
             - State:
