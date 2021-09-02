@@ -69,18 +69,20 @@ class Seq2Seq:
         self.bleu = Bleu_score()
 
         # Initialize Seq2Seq model
+        self.input_vocab_size = len(self.inp_builder.word_index) + 1
+        self.target_vocab_size = len(self.tar_builder.word_index) + 1
         if retrain and os.listdir(self.path_save) != []:
             print("[INFO] Start retrain...")
-            self.model = SequenceToSequence(self.inp_builder.vocab_size,
-                                            self.tar_builder.vocab_size,
+            self.model = SequenceToSequence(self.input_vocab_size,
+                                            self.target_vocab_size,
                                             self.embedding_size,
                                             self.hidden_units,
                                             self.train_mode,
                                             self.attention_mode)
             self.model.load_weights(self.path_save)
         else:
-            self.model = SequenceToSequence(self.inp_builder.vocab_size,
-                                            self.tar_builder.vocab_size,
+            self.model = SequenceToSequence(self.input_vocab_size,
+                                            self.target_vocab_size,
                                             self.embedding_size,
                                             self.hidden_units,
                                             self.train_mode,
@@ -90,9 +92,10 @@ class Seq2Seq:
         tmp = 0
         for epoch in range(self.EPOCHS):
             loss = 0
-            for batch_size, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
+            for _, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
                 with tf.GradientTape() as tape:
-                    sos = tf.reshape(tf.constant([self.tar_builder.word2id['<sos>']] * self.BATCH_SIZE), shape=(-1, 1))
+                    sos = tf.reshape(tf.constant([self.tar_builder.word_index['<sos>']] * self.BATCH_SIZE),
+                                     shape=(-1, 1))
                     dec_input = tf.concat([sos, y[:, :-1]], 1)  # Teacher forcing
                     outs = self.model(x, dec_input)
                     loss += self.loss(y, outs)
@@ -103,13 +106,14 @@ class Seq2Seq:
 
             if self.use_bleu:
                 print("\n=================================================================")
-                bleu_score = evaluation_with_attention(model=self.model,
-                                                       test_ds=train_ds,
-                                                       val_function=self.bleu,
-                                                       inp_builder=self.inp_builder,
-                                                       tar_builder=self.tar_builder,
-                                                       test_split_size=self.test_split_size,
-                                                       debug=self.debug)
+                bleu_score = evaluation(model=self.model,
+                                        test_ds=train_ds,
+                                        val_function=self.bleu,
+                                        inp_builder=self.inp_builder,
+                                        tar_builder=self.tar_builder,
+                                        test_split_size=self.test_split_size,
+                                        debug=self.debug)
+                print("-----------------------------------------------------------------")
                 print(f'Epoch {epoch + 1} -- Loss: {loss} -- Bleu_score: {bleu_score}')
                 if bleu_score > tmp:
                     self.model.save_weights(self.save_checkpoint)
@@ -127,7 +131,7 @@ class Seq2Seq:
             for batch_size, (x, y) in tqdm(enumerate(train_ds.batch(self.BATCH_SIZE).take(N_BATCH)), total=N_BATCH):
                 loss = 0
                 with tf.GradientTape() as tape:
-                    dec_input = tf.constant([self.tar_builder.word2id['<sos>']] * self.BATCH_SIZE)
+                    dec_input = tf.constant([self.tar_builder.word_index['<sos>']] * self.BATCH_SIZE)
                     for i in range(1, y.shape[1]):
                         decode_out = self.model(x, dec_input)
                         loss += self.loss(y[:, i], decode_out)
@@ -147,6 +151,7 @@ class Seq2Seq:
                                                        tar_builder=self.tar_builder,
                                                        test_split_size=self.test_split_size,
                                                        debug=self.debug)
+                print("-----------------------------------------------------------------")
                 print(f'Epoch {epoch + 1} -- Loss: {total_loss} -- Bleu_score: {bleu_score}')
                 if bleu_score > tmp:
                     self.model.save_weights(self.save_checkpoint)
@@ -201,7 +206,7 @@ if __name__ == "__main__":
     parser.add_argument("--attention-mode", default="luong", type=str)
     parser.add_argument("--use-lr-schedule", default=False, type=bool)
     parser.add_argument("--retrain", default=False, type=bool)
-    parser.add_argument("--use-bleu", default=False, type=bool)
+    parser.add_argument("--bleu", default=False, type=bool)
     parser.add_argument("--debug", default=False, type=bool)
 
     args = parser.parse_args()
@@ -236,7 +241,7 @@ if __name__ == "__main__":
             attention_mode=args.attention_mode,
             use_lr_schedule=args.use_lr_schedule,
             retrain=args.retrain,
-            use_bleu=args.use_bleu,
+            use_bleu=args.bleu,
             debug=args.debug).run()
 
     # python train.py --inp-lang="dataset/train.en.txt" --tar-lang="dataset/train.vi.txt" --hidden-units=256 --embedding-size=128 --epochs=200 --test-split-size=0.01 --train-mode="attention" --debug=True
