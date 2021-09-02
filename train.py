@@ -43,11 +43,11 @@ class Seq2Seq:
         self.train_mode = train_mode
         self.attention_mode = attention_mode
 
-        path_save = os.getcwd() + "/saved_models/"
+        path_save = os.getcwd() + "/saved_models"
         if not os.path.exists(path_save):
             os.mkdir(path_save)
 
-        self.save_model = path_save
+        self.save_model = path_save + "/model.ckpt"
         self.debug = debug
 
         # Load dataset
@@ -185,7 +185,7 @@ if __name__ == "__main__":
     parser.add_argument("--max-sentence", default=14, type=int)
     parser.add_argument("--warmup-steps", default=80, type=int)
     parser.add_argument("--test-split-size", default=0.01, type=float)
-    parser.add_argument("--learning-rate", default=0.01, type=float)
+    parser.add_argument("--learning-rate", default=0.005, type=float)
     parser.add_argument("--train-mode", default="not_attention", type=str)
     parser.add_argument("--attention-mode", default="luong", type=str)
     parser.add_argument("--use-lr-schedule", default=False, type=bool)
