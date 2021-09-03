@@ -140,12 +140,14 @@ Epoch 376 -- Loss: 30.585018157958984 -- Bleu_score: 0.6258203949505547
 =================================================================
 ```
 
+- [Another result](https://github.com/protonx-tf-03-projects/Seq2Seq/blob/main/assets/result_1.png)
+
 ### 2. Implementation using Encoder - Decoder with Attention Mechanism:
 
 ```
 -----------------------------------------------------------------
 Input    :  <sos> the science behind a climate headline <eos>
-Predicted:  khoa học đằng sau một tiêu đề về khí hậu <eos> đầy ra <eos> <eos> <eos> <eos> <eos> <eos> <eos>
+Predicted:  khoa học đằng sau một tiêu đề về khí hậu <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos>
 Target   :  <sos> khoa học đằng sau một tiêu đề về khí hậu <eos>
 -----------------------------------------------------------------
 Input    :  <sos> they are both two branches of the same field of atmospheric science <eos>
@@ -157,20 +159,22 @@ Predicted:  nghiên cứu được viết bởi 620 nhà khoa học từ 40 qu�
 Target   :  <sos> nghiên cứu được viết bởi 620 nhà khoa học từ 40 quốc gia khác nhau <eos>
 -----------------------------------------------------------------
 Input    :  <sos> they wrote almost a thousand pages on the topic <eos>
-Predicted:  họ viết gần 1000 trang về chủ đề này <eos> kê <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos>
+Predicted:  họ viết gần 1000 trang về chủ đề này <eos> kê trên cùng <eos> <eos> <eos> <eos> <eos> <eos> <eos>
 Target   :  <sos> họ viết gần 1000 trang về chủ đề này <eos>
 -----------------------------------------------------------------
 Input    :  <sos> over 15 000 scientists go to san francisco every year for that <eos>
-Predicted:  mỗi năm hơn 15 000 nhà khoa học đến san francisco để tham dự hội nghị này <eos> <eos> <eos>
+Predicted:  mỗi năm hơn 15 000 nhà khoa học đến san francisco để tham dự hội nghị này <eos> vũ <eos>
 Target   :  <sos> mỗi năm hơn 15 000 nhà khoa học đến san francisco để tham dự hội nghị này <eos>
 -----------------------------------------------------------------
 Input    :  <sos> it apos s a huge amount of stuff it apos s equal to the weight of methane <eos>
 Predicted:  đó là một lượng khí thải khổng lồ bằng tổng trọng lượng của mêtan <eos> <eos> <eos> <eos> <eos> <eos>
 Target   :  <sos> đó là một lượng khí thải khổng lồ bằng tổng trọng lượng của mêtan <eos>
 -----------------------------------------------------------------
-Epoch 50 -- Loss: 1445.3426513671875 -- Bleu_score: 0.8181773928807335
+Epoch 93 -- Loss: 295.7635192871094 -- Bleu_score: 0.956022394501728
 =================================================================
 ```
+
+- [Another result](https://github.com/protonx-tf-03-projects/Seq2Seq/blob/main/assets/result_2.png)
 
 **Comments about these results:**
 
