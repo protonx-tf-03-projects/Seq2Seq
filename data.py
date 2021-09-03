@@ -124,9 +124,3 @@ class DatasetLoader:
                 sentences_2.append(sen_2)
 
         return sentences_1, sentences_2
-
-
-if __name__ == '__main__':
-    data = DatasetLoader("dataset/train.en.txt", "dataset/train.vi.txt")
-    # data.build_dataset(False)
-    processed_original_language, processed_target_language, inp_builder, tar_builder = data.build_dataset(False)
