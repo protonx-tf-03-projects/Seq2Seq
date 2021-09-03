@@ -1,8 +1,8 @@
 # Seq2Seq
 
-<b align="center">
-<img src="https://github.com/protonx-tf-03-projects/Seq2Seq/blob/main/assets/Team.png" width=200 class="center" >
-</b>
+<p align="center">
+    <img src='https://github.com/protonx-tf-03-projects/Seq2Seq/blob/main/assets/Team.png' width=200 class="center">
+</p>
 
 ## Architecture Image
 
