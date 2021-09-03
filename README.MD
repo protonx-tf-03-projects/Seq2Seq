@@ -3,7 +3,7 @@
 ## Architecture Image
 
 <b align="center">
-<img src="F:\4. PROJECT_TF_03\Seq2Seq\assets\Net.png"/>
+<img src="https://github.com/protonx-tf-03-projects/Seq2Seq/blob/main/assets/Net.png"/>
 </b>
 
 Authors:
