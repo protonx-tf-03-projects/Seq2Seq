@@ -103,6 +103,7 @@ python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_inp
 **Note:**
 
 - If you want to translate a sentence, you can use this param: `--predict-a-sentence=True`
+- Click [Here](https://colab.research.google.com/drive/11X9pk2rdBAjXVQugfqxPDezZCuj8_QD9#scrollTo=jqC_yVxZ4qje) to open notebook in google colab.
 
 ## V. Result and Comparision
 
