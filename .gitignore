@@ -1,4 +1,6 @@
 .idea/
 */__pycache__/
 */model/tests/__pycache__/
-save/
+saved_models/
+test_model.py
+test_code.py

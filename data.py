@@ -1,47 +1,7 @@
 import string
 import re
 import os
-import numpy as np
-
-
-class BuildLanguage:
-    def __init__(self, lines):
-        self.lines = lines
-        self.word2id = {}
-        self.id2word = {}
-        self.vocab = set()
-        self.max_len = 0
-        self.min_len = 0
-        self.vocab_size = 0
-        self.init_language_params()
-
-    def init_language_params(self):
-        for line in self.lines:
-            self.vocab.update(line.split(" "))
-
-        self.word2id['<pad>'] = 0
-
-        for id, word in enumerate(self.vocab):
-            self.word2id[word] = id + 1
-
-        for word, id in self.word2id.items():
-            self.id2word[id] = word
-
-        self.max_len = max([len(line.split(" ")) for line in self.lines])
-        self.min_len = min([len(line.split(" ")) for line in self.lines])
-
-        self.vocab_size = len(self.vocab) + 1
-
-    def sentence_to_vector(self, sent):
-        return np.array([self.word2id[word] for word in sent.split(" ")])
-
-    def vector_to_sentence(self, vector):
-        sentence = []
-        for id in vector:
-            if id == 0:
-                break
-            sentence.append(self.id2word[id])
-        return " ".join(sentence)
+from tensorflow.keras.preprocessing.text import Tokenizer
 
 
 class DatasetLoader:
@@ -84,6 +44,9 @@ class DatasetLoader:
 
         self.punctuation = list(string.punctuation)
 
+        self.tokenize_inp = Tokenizer(filters='!"#$%&()*+,-./:;=?@[\\]^_`{|}~\t\n')
+        self.tokenize_tar = Tokenizer(filters='!"#$%&()*+,-./:;=?@[\\]^_`{|}~\t\n')
+
     def load_dataset(self):
         """
         :doing:
@@ -94,7 +57,6 @@ class DatasetLoader:
         current_dir = os.getcwd() + "/"
         raw_origin_language = open(current_dir + self.language_1, encoding="UTF-8").read().strip().split("\n")
         raw_target_language = open(current_dir + self.language_2, encoding="UTF-8").read().strip().split("\n")
-        assert len(raw_target_language) == len(raw_origin_language)
 
         return raw_origin_language, raw_target_language
 
@@ -115,16 +77,14 @@ class DatasetLoader:
         # Xử lý độ dài câu: min_length <= length <= max_length
         inp_lang, tar_lang = self.preprocessing_sentence(raw_origin_language, raw_target_language)
 
-        inp_vector = [inp_lang.sentence_to_vector(line) for line in inp_lang.lines]
-        tar_vector = [tar_lang.sentence_to_vector(line) for line in tar_lang.lines]
+        self.tokenize_inp.fit_on_texts(inp_lang)
+        self.tokenize_tar.fit_on_texts(tar_lang)
+        inp_vector = self.tokenize_inp.texts_to_sequences(inp_lang)
+        tar_vector = self.tokenize_tar.texts_to_sequences(tar_lang)
 
-        if debug:
-            for vector, sentence in zip(inp_vector[:5], inp_lang.lines[:5]):
-                print("Vector: {}\nSentence: {}\n\n".format(vector, sentence))
+        return inp_vector, tar_vector, self.tokenize_inp, self.tokenize_tar
 
-        return inp_vector, tar_vector, inp_lang, tar_lang
-
-    def remove_punctuation_digits(self, sen, tar_get=True):
+    def remove_punctuation(self, sen):
         """
         :input: sen: str
 
@@ -139,7 +99,7 @@ class DatasetLoader:
         sen = sen.strip()
         sen = re.sub("'", "", sen)
         sen = re.sub("\s+", " ", sen)
-        sen = " ".join([s for s in sen.split(" ") if s not in self.punctuation])
+        sen = " ".join([s for s in sen.split() if s not in self.punctuation])
         return "<sos> " + sen + " <eos>"
 
     def preprocessing_sentence(self, raw_origin_language, raw_target_language):
@@ -156,19 +116,17 @@ class DatasetLoader:
         sentences_1 = []
         sentences_2 = []
         for sen_1, sen_2 in zip(raw_origin_language, raw_target_language):
-            sen_1 = self.remove_punctuation_digits(sen_1, tar_get=False)
-            sen_2 = self.remove_punctuation_digits(sen_2)
+            sen_1 = self.remove_punctuation(sen_1)
+            sen_2 = self.remove_punctuation(sen_2)
             if self.min_length <= len(sen_1.split(" ")) <= self.max_length \
-                    and self.min_length <= len(sen_2.split(" ")) <= self.max_length:
+                    and self.min_length <= len(sen_2.split()) <= self.max_length:
                 sentences_1.append(sen_1)
                 sentences_2.append(sen_2)
 
-        inp_lang = BuildLanguage(sentences_1)
-        tar_lang = BuildLanguage(sentences_2)
-
-        return inp_lang, tar_lang
+        return sentences_1, sentences_2
 
 
 if __name__ == '__main__':
-    data = DatasetLoader("dataset/train.vi.txt", "dataset/train.en.txt")
-    processed_original_language, processed_target_language, _, _ = data.build_dataset(True)
+    data = DatasetLoader("dataset/train.en.txt", "dataset/train.vi.txt")
+    # data.build_dataset(False)
+    processed_original_language, processed_target_language, inp_builder, tar_builder = data.build_dataset(False)
