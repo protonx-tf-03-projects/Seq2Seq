@@ -73,6 +73,8 @@ python train.py  --inp-lang=${path_to_en_text_file} --target-lang=${path_to_vi_t
 **Note**:
 
 - If you want to retrain model, you can use this param: ```--retrain=True```
+- Click [Here](https://colab.research.google.com/drive/11X9pk2rdBAjXVQugfqxPDezZCuj8_QD9#scrollTo=jqC_yVxZ4qje) to open
+  notebook in google colab.
 
 **There are some important arguments for the script you should consider when running it:**
 
@@ -103,7 +105,6 @@ python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_inp
 **Note:**
 
 - If you want to translate a sentence, you can use this param: `--predict-a-sentence=True`
-- Click [Here](https://colab.research.google.com/drive/11X9pk2rdBAjXVQugfqxPDezZCuj8_QD9#scrollTo=jqC_yVxZ4qje) to open notebook in google colab.
 
 ## V. Result and Comparision
 
