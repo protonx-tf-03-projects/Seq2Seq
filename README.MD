@@ -1,13 +1,13 @@
 # Seq2Seq
 
 <b align="center">
-<img src="https://github.com/protonx-tf-03-projects/Seq2Seq/blob/main/assets/Team.png"/>
+<img src="https://github.com/protonx-tf-03-projects/Seq2Seq/blob/main/assets/Team.png" width=200 class="center" >
 </b>
 
 ## Architecture Image
 
 <b align="center">
-<img src="https://github.com/protonx-tf-03-projects/Seq2Seq/blob/main/assets/Net.png"/>
+<img src="https://github.com/protonx-tf-03-projects/Seq2Seq/blob/main/assets/Net.png" width=200 class="center">
 </b>
 
 Authors:
