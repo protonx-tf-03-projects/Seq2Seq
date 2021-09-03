@@ -1,5 +1,9 @@
 # Seq2Seq
 
+<b align="center">
+<img src="https://github.com/protonx-tf-03-projects/Seq2Seq/blob/main/assets/team.png"/>
+</b>
+
 ## Architecture Image
 
 <b align="center">
