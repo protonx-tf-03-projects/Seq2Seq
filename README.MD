@@ -98,7 +98,7 @@ python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_inp
 ```bash
 python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_input_data} \
                   --tar-lang-path=${link_to_target_data} --hidden-units=512 \
-                  --embedding-size=256 --min-sentence=0 --max-sentence=20 \
+                  --embedding-size=256 --min-sentence=0 --max-sentence=40 \
                   --attention-mode="luong" --train-mode="attention"
 ```
 
