@@ -98,7 +98,7 @@ python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_inp
 ```bash
 python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_input_data} \
                   --tar-lang-path=${link_to_target_data} --hidden-units=512 \
-                  --embedding-size=256 --min-sentence=0 --max-sentence=40 \
+                  --embedding-size=256 --min-sentence=0 --max-sentence=20 \
                   --attention-mode="luong" --train-mode="attention"
 ```
 
@@ -145,30 +145,30 @@ Epoch 376 -- Loss: 30.585018157958984 -- Bleu_score: 0.6258203949505547
 ```
 -----------------------------------------------------------------
 Input    :  <sos> the science behind a climate headline <eos>
-Predicted:  khoa học đằng sau một tiêu đề về khí hậu <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> lên <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos>
+Predicted:  khoa học đằng sau một tiêu đề về khí hậu <eos> đầy ra <eos> <eos> <eos> <eos> <eos> <eos> <eos>
 Target   :  <sos> khoa học đằng sau một tiêu đề về khí hậu <eos>
 -----------------------------------------------------------------
 Input    :  <sos> they are both two branches of the same field of atmospheric science <eos>
-Predicted:  cả hai đều là một nhánh của cùng một lĩnh vực trong ngành khoa học khí quyển <eos> <eos> <eos> <eos> khoa <eos> <eos> lên <eos> <eos> <eos> <eos> <eos>
+Predicted:  cả hai đều là một nhánh của cùng một lĩnh vực trong ngành khoa học khí quyển <eos> <eos> <eos>
 Target   :  <sos> cả hai đều là một nhánh của cùng một lĩnh vực trong ngành khoa học khí quyển <eos>
 -----------------------------------------------------------------
 Input    :  <sos> that report was written by 620 scientists from 40 countries <eos>
-Predicted:  báo cáo được viết bởi 620 nhà khoa học từ 40 quốc gia <eos> <eos> 40 khoa <eos> <eos> <eos> <eos> từ 40 nước <eos> <eos> <eos> <eos> <eos> <eos>
+Predicted:  nghiên cứu được viết bởi 620 nhà khoa học từ 40 quốc gia khác nhau <eos> <eos> <eos> <eos> <eos>
 Target   :  <sos> nghiên cứu được viết bởi 620 nhà khoa học từ 40 quốc gia khác nhau <eos>
 -----------------------------------------------------------------
 Input    :  <sos> they wrote almost a thousand pages on the topic <eos>
-Predicted:  họ viết gần 1000 trang về chủ đề này <eos> đáp <eos> về <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos>
+Predicted:  họ viết gần 1000 trang về chủ đề này <eos> kê <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos>
 Target   :  <sos> họ viết gần 1000 trang về chủ đề này <eos>
 -----------------------------------------------------------------
-Input    :  <sos> and all of those pages were reviewed by another 400 plus scientists and reviewers from 113 countries <eos>
-Predicted:  và tất cả những trang đó đều được xem xét lại bởi 400 nhà khoa học và nhà phê bình khác từ từ nhiều quốc gia <eos> <eos> phê từ
-Target   :  <sos> và tất cả các trang đều được xem xét bởi 400 khoa học gia và nhà phê bình khác từ 113 quốc gia <eos>
------------------------------------------------------------------
 Input    :  <sos> over 15 000 scientists go to san francisco every year for that <eos>
-Predicted:  trong vòng 15 000 nhà khoa học đến san francisco để tham dự hội nghị này <eos> năm nay <eos> năm <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos>
+Predicted:  mỗi năm hơn 15 000 nhà khoa học đến san francisco để tham dự hội nghị này <eos> <eos> <eos>
 Target   :  <sos> mỗi năm hơn 15 000 nhà khoa học đến san francisco để tham dự hội nghị này <eos>
 -----------------------------------------------------------------
-Epoch 51 -- Loss: 5987.03271484375 -- Bleu_score: 0.5728632331365847
+Input    :  <sos> it apos s a huge amount of stuff it apos s equal to the weight of methane <eos>
+Predicted:  đó là một lượng khí thải khổng lồ bằng tổng trọng lượng của mêtan <eos> <eos> <eos> <eos> <eos> <eos>
+Target   :  <sos> đó là một lượng khí thải khổng lồ bằng tổng trọng lượng của mêtan <eos>
+-----------------------------------------------------------------
+Epoch 50 -- Loss: 1445.3426513671875 -- Bleu_score: 0.8181773928807335
 =================================================================
 ```
 
