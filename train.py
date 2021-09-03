@@ -3,9 +3,13 @@ import tensorflow as tf
 from tqdm import tqdm
 from data import DatasetLoader
 from argparse import ArgumentParser
-from constant import MaskedSoftmaxCELoss, Bleu_score, CustomSchedule, evaluation, evaluation_with_attention
+from constant import evaluation, evaluation_with_attention
+from metrics import MaskedSoftmaxCELoss, Bleu_score, CustomSchedule
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from model.tests.model import LuongDecoder, BahdanauDecode, Decode, Encode
+from model.Encoder import Encode
+from model.Decoder import Decode
+from model.BahdanauDecode import BahdanauDecode
+from model.LuongDecoder import LuongDecoder
 
 
 class Seq2Seq:
