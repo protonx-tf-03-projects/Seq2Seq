@@ -70,7 +70,7 @@ python train.py  --inp-lang=${path_to_en_text_file} --target-lang=${path_to_vi_t
 
 - If you want to retrain model, you can use this param: ```--retrain=True```
 
-There are some important arguments for the script you should consider when running it:
+**There are some important arguments for the script you should consider when running it:**
 
 - `dataset`: The folder of dataset
     - `train.en.txt`: input language
@@ -78,7 +78,7 @@ There are some important arguments for the script you should consider when runni
 
 ## IV. Predict Process
 
-- Not use attention
+### 1. Not use attention
 
 ```bash
 python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_input_data} \
@@ -87,7 +87,7 @@ python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_inp
                   --train-mode="not_attention"
 ```
 
-- Use attention
+### 2. Use attention
 
 ```bash
 python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_input_data} \
@@ -96,9 +96,13 @@ python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_inp
                   --attention-mode="luong" --train-mode="attention"
 ```
 
+**Note:**
+
+- If you want to translate a sentence, you can use this param: `--predict-a-sentence=True`
+
 ## V. Result and Comparision
 
-Implementation using Encode-Decode:
+### 1. Implementation using Encode - Decode:
 
 ```
 -----------------------------------------------------------------
@@ -130,7 +134,8 @@ Epoch 376 -- Loss: 30.585018157958984 -- Bleu_score: 0.6258203949505547
 =================================================================
 ```
 
-Implementation using Encoder - Decoder **Attention**:
+### 2. Implementation using Encoder - Decoder with Attention Mechanism:
+
 ```
 -----------------------------------------------------------------
 Input    :  <sos> the science behind a climate headline <eos>
@@ -161,7 +166,7 @@ Epoch 51 -- Loss: 5987.03271484375 -- Bleu_score: 0.5728632331365847
 =================================================================
 ```
 
-Comments about these results:
+**Comments about these results:**
 
 - Model with no attention is good at sort sequences about 5 to 14 characteristics.
 - Model with attention needs a lot of data for training.
