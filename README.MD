@@ -62,7 +62,7 @@ python train.py  --inp-lang=${path_to_en_text_file} --target-lang=${path_to_vi_t
 python train.py  --inp-lang=${path_to_en_text_file} --target-lang=${path_to_vi_text_file} \
                  --batch-size=128 --hidden-units=512 --embedding-size=256 \
                  --epochs=1000 --train-mode="attention" --test-split-size=0.001 \
-                 --min-sentence=10 --max-sentence=14 --debug=True \
+                 --min-sentence=0 --max-sentence=40 --debug=True \
                  --warmup-steps=150 --use-lr-schedule=True --bleu=True
 ```
 
@@ -92,7 +92,7 @@ python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_inp
 ```bash
 python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_input_data} \
                   --tar-lang-path=${link_to_target_data} --hidden-units=512 \
-                  --embedding-size=256 --min-sentence=10 --max-sentence=14 \
+                  --embedding-size=256 --min-sentence=0 --max-sentence=40 \
                   --attention-mode="luong" --train-mode="attention"
 ```
 
@@ -101,7 +101,6 @@ python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_inp
 Implementation using Encode-Decode:
 
 ```
-100% 116/116 [00:02<00:00, 44.00it/s]
 -----------------------------------------------------------------
 Input    :  <sos> they wrote almost a thousand pages on the topic <eos>
 Predicted:  <sos> họ viết gần 1000 trang về của tranh của mình <eos> <eos> <eos>
@@ -131,7 +130,38 @@ Epoch 376 -- Loss: 30.585018157958984 -- Bleu_score: 0.6258203949505547
 =================================================================
 ```
 
+Implementation using Encoder - Decoder **Attention**:
+```
+-----------------------------------------------------------------
+Input    :  <sos> the science behind a climate headline <eos>
+Predicted:  khoa học đằng sau một tiêu đề về khí hậu <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> lên <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos>
+Target   :  <sos> khoa học đằng sau một tiêu đề về khí hậu <eos>
+-----------------------------------------------------------------
+Input    :  <sos> they are both two branches of the same field of atmospheric science <eos>
+Predicted:  cả hai đều là một nhánh của cùng một lĩnh vực trong ngành khoa học khí quyển <eos> <eos> <eos> <eos> khoa <eos> <eos> lên <eos> <eos> <eos> <eos> <eos>
+Target   :  <sos> cả hai đều là một nhánh của cùng một lĩnh vực trong ngành khoa học khí quyển <eos>
+-----------------------------------------------------------------
+Input    :  <sos> that report was written by 620 scientists from 40 countries <eos>
+Predicted:  báo cáo được viết bởi 620 nhà khoa học từ 40 quốc gia <eos> <eos> 40 khoa <eos> <eos> <eos> <eos> từ 40 nước <eos> <eos> <eos> <eos> <eos> <eos>
+Target   :  <sos> nghiên cứu được viết bởi 620 nhà khoa học từ 40 quốc gia khác nhau <eos>
+-----------------------------------------------------------------
+Input    :  <sos> they wrote almost a thousand pages on the topic <eos>
+Predicted:  họ viết gần 1000 trang về chủ đề này <eos> đáp <eos> về <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos>
+Target   :  <sos> họ viết gần 1000 trang về chủ đề này <eos>
+-----------------------------------------------------------------
+Input    :  <sos> and all of those pages were reviewed by another 400 plus scientists and reviewers from 113 countries <eos>
+Predicted:  và tất cả những trang đó đều được xem xét lại bởi 400 nhà khoa học và nhà phê bình khác từ từ nhiều quốc gia <eos> <eos> phê từ
+Target   :  <sos> và tất cả các trang đều được xem xét bởi 400 khoa học gia và nhà phê bình khác từ 113 quốc gia <eos>
+-----------------------------------------------------------------
+Input    :  <sos> over 15 000 scientists go to san francisco every year for that <eos>
+Predicted:  trong vòng 15 000 nhà khoa học đến san francisco để tham dự hội nghị này <eos> năm nay <eos> năm <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos>
+Target   :  <sos> mỗi năm hơn 15 000 nhà khoa học đến san francisco để tham dự hội nghị này <eos>
+-----------------------------------------------------------------
+Epoch 51 -- Loss: 5987.03271484375 -- Bleu_score: 0.5728632331365847
+=================================================================
+```
+
 Comments about these results:
 
 - Model with no attention is good at sort sequences about 5 to 14 characteristics.
-- Model with attention needs a lot of data for training to get the good.
+- Model with attention needs a lot of data for training.
