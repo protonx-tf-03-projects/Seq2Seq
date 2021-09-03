@@ -6,10 +6,9 @@
 
 ## Architecture Image
 
-<p align="center">
-    <img src='https://github.com/protonx-tf-03-projects/Seq2Seq/blob/main/assets/Net.png'>
-</p>
-
+<b align="center">
+<img src="https://github.com/protonx-tf-03-projects/Seq2Seq/blob/main/assets/Net.png">
+</b>
 
 Authors:
 
