@@ -1,8 +1,14 @@
 # Seq2Seq
 
+Implementation of [Sequence to Sequence Learning with Neural Networks](https://arxiv.org/pdf/1409.3215.pdf). This
+library is part of our project: Building an AI library with ProtonX.
+
 <p align="center">
     <img src='https://github.com/protonx-tf-03-projects/Seq2Seq/blob/main/assets/Team.png' width=200 class="center">
 </p>
+
+In this paper, the authors used `Encoder - Decoder` base model to translate `English-Franche`, but we
+used `Vietnamese-English` and added two `Attention mechanisms`: [Luong attention](https://arxiv.org/pdf/1508.04025.pdf) and [Bahdanau attention](https://arxiv.org/pdf/1409.0473.pdf)
 
 ## Architecture Image
 
