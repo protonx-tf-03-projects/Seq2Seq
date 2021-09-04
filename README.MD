@@ -1,8 +1,18 @@
 # Seq2Seq
 
+Implementation of [Sequence to Sequence Learning with Neural Networks](https://arxiv.org/pdf/1409.3215.pdf). This
+library is part of our project: Building an AI library with ProtonX.
+
 <p align="center">
     <img src='https://github.com/protonx-tf-03-projects/Seq2Seq/blob/main/assets/Team.png' width=200 class="center">
 </p>
+
+In this paper, the authors used `Encoder - Decoder` base model and `English-Franche` dataset, but we
+used `Vietnamese-English` dataset and added two `Attention mechanisms`: [Luong attention](https://arxiv.org/pdf/1508.04025.pdf)
+and [Bahdanau attention](https://arxiv.org/pdf/1409.0473.pdf)
+
+**Note:** In attention training part, we used `warm-up learning rate`, it's used in part 5.3
+of [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf) paper.
 
 ## Architecture Image
 
@@ -140,37 +150,41 @@ Epoch 376 -- Loss: 30.585018157958984 -- Bleu_score: 0.6258203949505547
 =================================================================
 ```
 
+- [Another result](https://github.com/protonx-tf-03-projects/Seq2Seq/blob/main/assets/result_1.png)
+
 ### 2. Implementation using Encoder - Decoder with Attention Mechanism:
 
 ```
 -----------------------------------------------------------------
 Input    :  <sos> the science behind a climate headline <eos>
-Predicted:  khoa học đằng sau một tiêu đề về khí hậu <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> lên <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos>
+Predicted:  khoa học đằng sau một tiêu đề về khí hậu <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos>
 Target   :  <sos> khoa học đằng sau một tiêu đề về khí hậu <eos>
 -----------------------------------------------------------------
 Input    :  <sos> they are both two branches of the same field of atmospheric science <eos>
-Predicted:  cả hai đều là một nhánh của cùng một lĩnh vực trong ngành khoa học khí quyển <eos> <eos> <eos> <eos> khoa <eos> <eos> lên <eos> <eos> <eos> <eos> <eos>
+Predicted:  cả hai đều là một nhánh của cùng một lĩnh vực trong ngành khoa học khí quyển <eos> <eos> <eos>
 Target   :  <sos> cả hai đều là một nhánh của cùng một lĩnh vực trong ngành khoa học khí quyển <eos>
 -----------------------------------------------------------------
 Input    :  <sos> that report was written by 620 scientists from 40 countries <eos>
-Predicted:  báo cáo được viết bởi 620 nhà khoa học từ 40 quốc gia <eos> <eos> 40 khoa <eos> <eos> <eos> <eos> từ 40 nước <eos> <eos> <eos> <eos> <eos> <eos>
+Predicted:  nghiên cứu được viết bởi 620 nhà khoa học từ 40 quốc gia khác nhau <eos> <eos> <eos> <eos> <eos>
 Target   :  <sos> nghiên cứu được viết bởi 620 nhà khoa học từ 40 quốc gia khác nhau <eos>
 -----------------------------------------------------------------
 Input    :  <sos> they wrote almost a thousand pages on the topic <eos>
-Predicted:  họ viết gần 1000 trang về chủ đề này <eos> đáp <eos> về <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos>
+Predicted:  họ viết gần 1000 trang về chủ đề này <eos> kê trên cùng <eos> <eos> <eos> <eos> <eos> <eos> <eos>
 Target   :  <sos> họ viết gần 1000 trang về chủ đề này <eos>
 -----------------------------------------------------------------
-Input    :  <sos> and all of those pages were reviewed by another 400 plus scientists and reviewers from 113 countries <eos>
-Predicted:  và tất cả những trang đó đều được xem xét lại bởi 400 nhà khoa học và nhà phê bình khác từ từ nhiều quốc gia <eos> <eos> phê từ
-Target   :  <sos> và tất cả các trang đều được xem xét bởi 400 khoa học gia và nhà phê bình khác từ 113 quốc gia <eos>
------------------------------------------------------------------
 Input    :  <sos> over 15 000 scientists go to san francisco every year for that <eos>
-Predicted:  trong vòng 15 000 nhà khoa học đến san francisco để tham dự hội nghị này <eos> năm nay <eos> năm <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos> <eos>
+Predicted:  mỗi năm hơn 15 000 nhà khoa học đến san francisco để tham dự hội nghị này <eos> vũ <eos>
 Target   :  <sos> mỗi năm hơn 15 000 nhà khoa học đến san francisco để tham dự hội nghị này <eos>
 -----------------------------------------------------------------
-Epoch 51 -- Loss: 5987.03271484375 -- Bleu_score: 0.5728632331365847
+Input    :  <sos> it apos s a huge amount of stuff it apos s equal to the weight of methane <eos>
+Predicted:  đó là một lượng khí thải khổng lồ bằng tổng trọng lượng của mêtan <eos> <eos> <eos> <eos> <eos> <eos>
+Target   :  <sos> đó là một lượng khí thải khổng lồ bằng tổng trọng lượng của mêtan <eos>
+-----------------------------------------------------------------
+Epoch 93 -- Loss: 295.7635192871094 -- Bleu_score: 0.956022394501728
 =================================================================
 ```
+
+- [Another result](https://github.com/protonx-tf-03-projects/Seq2Seq/blob/main/assets/result_2.png)
 
 **Comments about these results:**
 
