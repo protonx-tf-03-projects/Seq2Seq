@@ -8,7 +8,11 @@ library is part of our project: Building an AI library with ProtonX.
 </p>
 
 In this paper, the authors used `Encoder - Decoder` base model to translate `English-Franche`, but we
-used `Vietnamese-English` and added two `Attention mechanisms`: [Luong attention](https://arxiv.org/pdf/1508.04025.pdf) and [Bahdanau attention](https://arxiv.org/pdf/1409.0473.pdf)
+used `Vietnamese-English` and added two `Attention mechanisms`: [Luong attention](https://arxiv.org/pdf/1508.04025.pdf)
+and [Bahdanau attention](https://arxiv.org/pdf/1409.0473.pdf)
+
+**Note:** In attention training part, we used warm-up learning rate, it's used in part 5.3
+of [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf) paper.
 
 ## Architecture Image
 
