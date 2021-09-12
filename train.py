@@ -10,6 +10,7 @@ from model.Encoder import Encode
 from model.Decoder import Decode
 from model.BahdanauDecode import BahdanauDecode
 from model.LuongDecoder import LuongDecoder
+from sklearn.model_selection import train_test_split
 
 
 class Seq2Seq:
@@ -150,7 +151,10 @@ class Seq2Seq:
                                 truncating="post")
 
         # Add to tensor
-        train_ds = tf.data.Dataset.from_tensor_slices((train_x, train_y))
+        dataset = tf.data.Dataset.from_tensor_slices((train_x, train_y))
+
+        train_ds, val_ds = train_test_split(dataset, test_size=self.test_split_size)
+
         N_BATCH = train_x.shape[0] // self.BATCH_SIZE
 
         tmp = 0
@@ -167,7 +171,7 @@ class Seq2Seq:
                 if self.train_mode.lower() == "attention":
                     bleu_score = evaluation_with_attention(encoder=self.encoder,
                                                            decoder=self.decoder,
-                                                           test_ds=train_ds,
+                                                           test_ds=val_ds,
                                                            val_function=self.bleu,
                                                            inp_builder=self.inp_builder,
                                                            tar_builder=self.tar_builder,
@@ -176,7 +180,7 @@ class Seq2Seq:
                 elif self.train_mode.lower() != "attention":
                     bleu_score = evaluation(encoder=self.encoder,
                                             decoder=self.decoder,
-                                            test_ds=train_ds,
+                                            test_ds=val_ds,
                                             val_function=self.bleu,
                                             inp_builder=self.inp_builder,
                                             tar_builder=self.tar_builder,
