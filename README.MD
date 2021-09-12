@@ -8,7 +8,8 @@ library is part of our project: Building an AI library with ProtonX.
 </p>
 
 In this paper, the authors used `Encoder - Decoder` base model and `English-Franche` dataset, but we
-used `Vietnamese-English` dataset and added two `Attention mechanisms`: [Luong attention](https://arxiv.org/pdf/1508.04025.pdf)
+used `Vietnamese-English` dataset and added
+two `Attention mechanisms`: [Luong attention](https://arxiv.org/pdf/1508.04025.pdf)
 and [Bahdanau attention](https://arxiv.org/pdf/1409.0473.pdf) to choose
 
 **Note:** In attention training part, we used `warm-up learning rate`, it's used in part 5.3
@@ -60,6 +61,10 @@ conda activate {your_env_name}
 
 Training script:
 
+<a href="https://colab.research.google.com/drive/11X9pk2rdBAjXVQugfqxPDezZCuj8_QD9#scrollTo=jqC_yVxZ4qje">
+  <img src="https://camo.githubusercontent.com/84f0493939e0c4de4e6dbe113251b4bfb5353e57134ffd9fcab6b8714514d4d1/68747470733a2f2f636f6c61622e72657365617263682e676f6f676c652e636f6d2f6173736574732f636f6c61622d62616467652e737667">
+</a>
+
 - Not use attention:
 
 ```bash
@@ -83,8 +88,6 @@ python train.py  --inp-lang=${path_to_en_text_file} --target-lang=${path_to_vi_t
 **Note**:
 
 - If you want to retrain model, you can use this param: ```--retrain=True```
-- Click [Here](https://colab.research.google.com/drive/11X9pk2rdBAjXVQugfqxPDezZCuj8_QD9#scrollTo=jqC_yVxZ4qje) to open
-  notebook in google colab.
 
 **There are some important arguments for the script you should consider when running it:**
 
