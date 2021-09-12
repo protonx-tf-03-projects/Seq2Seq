@@ -1,7 +1,27 @@
+import json
 import string
 import re
 import os
 from tensorflow.keras.preprocessing.text import Tokenizer
+
+
+def remove_punctuation(sen):
+    """
+    :input: sen: str
+
+    :doing:
+        1. Xóa dấu câu và số
+        2. Thêm phần tử nhận diện lúc bắt đầu và kết thúc dịch (VD: <start>, <stop>, ...)
+
+    :return:
+        Dữ liệu không chứa dấu câu và số
+    """
+    sen = sen.lower()
+    sen = sen.strip()
+    sen = re.sub("'", "", sen)
+    sen = re.sub("\s+", " ", sen)
+    sen = " ".join([s for s in sen.split() if s not in list(string.punctuation)])
+    return "<sos> " + sen + " <eos>"
 
 
 class DatasetLoader:
@@ -42,10 +62,16 @@ class DatasetLoader:
         self.min_length = min_length
         self.max_length = max_length
 
-        self.punctuation = list(string.punctuation)
+        self.save_dict = os.getcwd() + "/saved_models/{}_vocab.json"
 
-        self.tokenize_inp = Tokenizer(filters='!"#$%&()*+,-./:;=?@[\\]^_`{|}~\t\n')
-        self.tokenize_tar = Tokenizer(filters='!"#$%&()*+,-./:;=?@[\\]^_`{|}~\t\n')
+    def save_tokenizer(self, object, name_vocab):
+        f = open(self.save_dict.format(name_vocab), "w", encoding="utf-8")
+        json.dumps(f.write(str(object.word_index).replace("'", "\"")))
+        f.close()
+
+    def load_tokenizer(self, name_vocab):
+        f = open(self.save_dict.format(name_vocab), "r", encoding="utf-8")
+        return json.load(f)
 
     def load_dataset(self):
         """
@@ -60,7 +86,7 @@ class DatasetLoader:
 
         return raw_origin_language, raw_target_language
 
-    def build_dataset(self, debug=False):
+    def build_dataset(self):
         """
         :doing:
             1. Khởi tạo liệu
@@ -77,30 +103,23 @@ class DatasetLoader:
         # Xử lý độ dài câu: min_length <= length <= max_length
         inp_lang, tar_lang = self.preprocessing_sentence(raw_origin_language, raw_target_language)
 
-        self.tokenize_inp.fit_on_texts(inp_lang)
-        self.tokenize_tar.fit_on_texts(tar_lang)
-        inp_vector = self.tokenize_inp.texts_to_sequences(inp_lang)
-        tar_vector = self.tokenize_tar.texts_to_sequences(tar_lang)
+        # Build Tokenizer
+        tokenize_inp = Tokenizer(filters='!"#$%&()*+,-./:;=?@[\\]^_`{|}~\t\n')
+        tokenize_tar = Tokenizer(filters='!"#$%&()*+,-./:;=?@[\\]^_`{|}~\t\n')
 
-        return inp_vector, tar_vector, self.tokenize_inp, self.tokenize_tar
+        # Fit text
+        tokenize_inp.fit_on_texts(inp_lang)
+        tokenize_tar.fit_on_texts(tar_lang)
 
-    def remove_punctuation(self, sen):
-        """
-        :input: sen: str
+        # save tokenizer
+        self.save_tokenizer(tokenize_inp, name_vocab="input")
+        self.save_tokenizer(tokenize_tar, name_vocab="target")
 
-        :doing:
-            1. Xóa dấu câu và số
-            2. Thêm phần tử nhận diện lúc bắt đầu và kết thúc dịch (VD: <start>, <stop>, ...)
+        # Get tensor
+        inp_vector = tokenize_inp.texts_to_sequences(inp_lang)
+        tar_vector = tokenize_tar.texts_to_sequences(tar_lang)
 
-        :return:
-            Dữ liệu không chứa dấu câu và số
-        """
-        sen = sen.lower()
-        sen = sen.strip()
-        sen = re.sub("'", "", sen)
-        sen = re.sub("\s+", " ", sen)
-        sen = " ".join([s for s in sen.split() if s not in self.punctuation])
-        return "<sos> " + sen + " <eos>"
+        return inp_vector, tar_vector, tokenize_inp, tokenize_tar
 
     def preprocessing_sentence(self, raw_origin_language, raw_target_language):
         """
@@ -116,11 +135,18 @@ class DatasetLoader:
         sentences_1 = []
         sentences_2 = []
         for sen_1, sen_2 in zip(raw_origin_language, raw_target_language):
-            sen_1 = self.remove_punctuation(sen_1)
-            sen_2 = self.remove_punctuation(sen_2)
+            sen_1 = remove_punctuation(sen_1)
+            sen_2 = remove_punctuation(sen_2)
             if self.min_length <= len(sen_1.split(" ")) <= self.max_length \
                     and self.min_length <= len(sen_2.split()) <= self.max_length:
                 sentences_1.append(sen_1)
                 sentences_2.append(sen_2)
 
         return sentences_1, sentences_2
+
+
+if __name__ == '__main__':
+    save_dict = os.getcwd() + "/saved_models/{}_vocab.json"
+    f = open(save_dict.format("input"), "r", encoding="utf-8")
+    a = json.load(f)
+    # print(a.values())
