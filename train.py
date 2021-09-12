@@ -11,7 +11,6 @@ from model.Decoder import Decode
 from model.BahdanauDecode import BahdanauDecode
 from model.LuongDecoder import LuongDecoder
 from sklearn.model_selection import train_test_split
-import json
 
 
 class Seq2Seq:
@@ -220,7 +219,7 @@ if __name__ == "__main__":
     parser.add_argument("--min-sentence", default=10, type=int)
     parser.add_argument("--max-sentence", default=14, type=int)
     parser.add_argument("--warmup-steps", default=80, type=int)
-    parser.add_argument("--test-split-size", default=0.01, type=float)
+    parser.add_argument("--test-split-size", default=0.1, type=float)
     parser.add_argument("--learning-rate", default=0.005, type=float)
     parser.add_argument("--train-mode", default="not_attention", type=str)
     parser.add_argument("--attention-mode", default="luong", type=str)
