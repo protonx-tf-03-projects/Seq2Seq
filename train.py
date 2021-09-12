@@ -10,6 +10,8 @@ from model.Encoder import Encode
 from model.Decoder import Decode
 from model.BahdanauDecode import BahdanauDecode
 from model.LuongDecoder import LuongDecoder
+from sklearn.model_selection import train_test_split
+import json
 
 
 class Seq2Seq:
@@ -46,7 +48,8 @@ class Seq2Seq:
         self.train_mode = train_mode
         self.attention_mode = attention_mode
 
-        self.path_save = os.getcwd() + "/saved_models"
+        home = os.getcwd()
+        self.path_save = home + "/saved_models"
         if not os.path.exists(self.path_save):
             os.mkdir(self.path_save)
 
@@ -140,17 +143,21 @@ class Seq2Seq:
 
     def training(self):
         # Padding in sequences
-        train_x = pad_sequences(self.inp_tensor,
-                                maxlen=self.max_length,
-                                padding="post",
-                                truncating="post")
-        train_y = pad_sequences(self.tar_tensor,
-                                maxlen=self.max_length,
-                                padding="post",
-                                truncating="post")
+        input_data = pad_sequences(self.inp_tensor,
+                                   maxlen=self.max_length,
+                                   padding="post",
+                                   truncating="post")
+        target_data = pad_sequences(self.tar_tensor,
+                                    maxlen=self.max_length,
+                                    padding="post",
+                                    truncating="post")
 
         # Add to tensor
+        train_x, test_x, train_y, test_y = train_test_split(input_data, target_data, test_size=self.test_split_size)
+
         train_ds = tf.data.Dataset.from_tensor_slices((train_x, train_y))
+        val_ds = tf.data.Dataset.from_tensor_slices((test_x, test_y))
+
         N_BATCH = train_x.shape[0] // self.BATCH_SIZE
 
         tmp = 0
@@ -167,7 +174,7 @@ class Seq2Seq:
                 if self.train_mode.lower() == "attention":
                     bleu_score = evaluation_with_attention(encoder=self.encoder,
                                                            decoder=self.decoder,
-                                                           test_ds=train_ds,
+                                                           test_ds=val_ds,
                                                            val_function=self.bleu,
                                                            inp_builder=self.inp_builder,
                                                            tar_builder=self.tar_builder,
@@ -176,7 +183,7 @@ class Seq2Seq:
                 elif self.train_mode.lower() != "attention":
                     bleu_score = evaluation(encoder=self.encoder,
                                             decoder=self.decoder,
-                                            test_ds=train_ds,
+                                            test_ds=val_ds,
                                             val_function=self.bleu,
                                             inp_builder=self.inp_builder,
                                             tar_builder=self.tar_builder,

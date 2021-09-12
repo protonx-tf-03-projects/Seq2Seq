@@ -97,18 +97,16 @@ python train.py  --inp-lang=${path_to_en_text_file} --target-lang=${path_to_vi_t
 ### 1. Not use attention
 
 ```bash
-python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_input_data} \
-                  --tar-lang-path=${link_to_target_data} --hidden-units=128 \
-                  --embedding-size=64 --min-sentence=10 --max-sentence=14 \
+python predict.py --test-path=${link_to_test_data} --hidden-units=128 \
+                  --embedding-size=64 --max-sentence=14 \
                   --train-mode="not_attention"
 ```
 
 ### 2. Use attention
 
 ```bash
-python predict.py --test-path=${link_to_test_data} --inp-lang-path=${link_to_input_data} \
-                  --tar-lang-path=${link_to_target_data} --hidden-units=512 \
-                  --embedding-size=256 --min-sentence=0 --max-sentence=40 \
+python predict.py --test-path=${link_to_test_data} --hidden-units=512 \
+                  --embedding-size=256 --max-sentence=40 \
                   --attention-mode="luong" --train-mode="attention"
 ```
 
